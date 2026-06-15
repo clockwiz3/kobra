@@ -10,6 +10,7 @@ const router = createRouter({
   routes: [
     { path: '/', name: 'home', component: () => import('./pages/Waitlist.vue') },
     { path: '/confirm/:token', name: 'waitlist.confirm', component: () => import('./pages/WaitlistConfirm.vue') },
+    { path: '/board', name: 'board', component: () => import('./pages/Board.vue') },
   ],
 })
 

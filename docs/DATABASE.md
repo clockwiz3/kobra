@@ -20,8 +20,8 @@
 
 Эти таблицы scoped по `couple_id` и проверяются grep-гейтом (запрет `DB::table()` по ним, обязательный `couple_id`-предикат):
 
-**Сейчас:** `gamification_profiles`, `activity_events`, `achievement_unlocks`.
-**Будущие (DOCUMENT-ONLY):** `boards`, `board_columns`, `cards`, `card_assignees`, `card_comments`, `labels`, `card_label`, `wishlists`, `wishlist_items`, `item_reservations`, `couple_theme`, `couple_streak_days`, `hearts_transactions`, `couple_quests`.
+**Сейчас:** `gamification_profiles`, `activity_events`, `achievement_unlocks`, `boards`, `board_columns`, `cards`, `labels`, `card_label`.
+**Будущие (DOCUMENT-ONLY):** `card_comments`, `wishlists`, `wishlist_items`, `item_reservations`, `couple_theme`, `couple_streak_days`, `hearts_transactions`, `couple_quests`.
 
 > НЕ scoped (хотя связаны с парами): `couples` (это сам shard-root), `couple_user`, `couple_invitations` (membership / pre-active — доступ через lifecycle-сервисы, не tenant-запросами). `users`, `notifications`, `telegram_link_tokens`, `waitlist_entries` — cross/pre-shard.
 
@@ -212,8 +212,8 @@ erDiagram
 
 ## DOCUMENT-ONLY (будущие фичи — couple-scoped, не мигрируем сейчас)
 
-### Kanban (milestone Kanban)
-- `boards`(couple_id, name, ...), `board_columns`(board_id, position), `cards`(couple_id, board_column_id, title, assignee?, due_at, position), `card_assignees`(card_id, user_id), `card_comments`(card_id, user_id, body), `labels`(couple_id), `card_label`(card_id, label_id). Real-time через Reverb `couple.{id}`.
+### Kanban (✅ МИГРИРОВАНО, milestone Kanban)
+- `boards`(couple_id, name, position), `board_columns`(couple_id, board_id, title, position), `cards`(couple_id, board_column_id, title, description, **assignee enum** him/her/together, due_at, done, completed_at, position), `labels`(couple_id, name, color), `card_label`(couple_id, card_id, label_id, unique). Все couple-scoped (CASCADE). `card_comments` — отложено. Real-time через Reverb `couple.{id}`.
 
 ### Wishlists (milestone Wishlists)
 - `wishlists`(couple_id), `wishlist_items`(wishlist_id, title, url, price), `item_reservations`(item_id, reserved_by_user_id) — «скрытая бронь»: видна резервирующему, скрыта от партнёра.

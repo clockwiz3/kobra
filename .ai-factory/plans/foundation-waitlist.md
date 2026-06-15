@@ -92,9 +92,9 @@ Pre-account данные, вне shard-системы. Реферал-машин
 <!-- Commit checkpoint: tasks 3-6 -->
 
 ### Phase 3: Waitlist (double-opt-in, без рефералов)
-- [ ] Task 7: **Вайтлист-модель** — убраны referral_code/referred_by/position; email/status/confirmation_token/telegram_id/utm/locale + INDEX(status,id); НЕ CoupleScoped; статичная позиция выводится на чтении. (depends on 2)
-- [ ] Task 8: **Вайтлист API** — POST /join (idempotent dedup, double-opt-in, опц. Telegram), GET /confirm/{token} (idempotent), опц. GET /status/{token} (confirmed + static_position). Вне couple-context. (depends on 7, 6)
-- [ ] Task 9: **Лендинг вайтлиста (Vue, PWA)** — confirmation/anticipation success-state, опц. «#N в списке», CTA Telegram, тизер частиц (prefers-reduced-motion); реферал-UI/лидерборд удалены. (depends on 8)
+- [x] Task 7: **Вайтлист-модель** — убраны referral_code/referred_by/position; email/status/confirmation_token/telegram_id/utm/locale + INDEX(status,id); НЕ CoupleScoped; статичная позиция выводится на чтении. (depends on 2)
+- [x] Task 8: **Вайтлист API** — POST /join (idempotent dedup, double-opt-in, опц. Telegram), GET /confirm/{token} (idempotent), опц. GET /status/{token} (confirmed + static_position). Вне couple-context. (depends on 7, 6)
+- [x] Task 9: **Лендинг вайтлиста (Vue, PWA)** — confirmation/anticipation success-state, опц. «#N в списке», CTA Telegram, тизер частиц (prefers-reduced-motion); реферал-UI/лидерборд удалены. (depends on 8)
 <!-- Commit checkpoint: tasks 7-9 -->
 
 ### Phase 4: Telegram Bot + Notifications

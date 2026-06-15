@@ -8,7 +8,8 @@ import App from './App.vue'
 const router = createRouter({
   history: createWebHistory(),
   routes: [
-    { path: '/', name: 'home', component: () => import('./pages/Home.vue') },
+    { path: '/', name: 'home', component: () => import('./pages/Waitlist.vue') },
+    { path: '/confirm/:token', name: 'waitlist.confirm', component: () => import('./pages/WaitlistConfirm.vue') },
   ],
 })
 

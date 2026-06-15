@@ -28,5 +28,10 @@ class AppServiceProvider extends ServiceProvider
 
         // Listener CreateGamificationProfile авто-регистрируется Laravel (discovery в app/Listeners),
         // поэтому вручную через Event::listen НЕ регистрируем — иначе двойной вызов.
+
+        // Очереди: сбрасываем CoupleContext перед каждой job (изоляция на переиспользуемом воркере).
+        \Illuminate\Support\Facades\Queue::before(function (): void {
+            app(\App\Support\CoupleContext::class)->clear();
+        });
     }
 }

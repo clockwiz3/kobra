@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { onMounted, ref } from 'vue'
 import draggable from 'vuedraggable'
 import ThemeSwitch from '@/components/ui/ThemeSwitch.vue'
 import KanbanColumn from '@/components/kanban/KanbanColumn.vue'
@@ -19,7 +19,10 @@ function addColumn() {
   log.debug('add-column')
 }
 
+onMounted(() => store.fetchBoard())
+
 function onColumnReorder() {
+  store.persistColumnReorder()
   log.debug('column-reorder')
 }
 </script>

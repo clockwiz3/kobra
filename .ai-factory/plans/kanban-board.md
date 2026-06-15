@@ -53,7 +53,7 @@ Rationale: Это и есть реализация этого майлстоун
 <!-- Commit checkpoint: tasks 19-22 -->
 
 ### Phase 3: Интеграция фронт↔бэк + real-time
-- [ ] Task 23: Подключить board-store к реальному API (typed client, оптимизм+откат). (depends on 22,18)
+- [x] Task 23: Подключить board-store к реальному API (typed client, оптимизм+откат). (depends on 22,18)
 - [ ] Task 24: Reverb + broadcasting + канал `couple.{id}` + broadcast card/column событий. (depends on 22)
 - [ ] Task 25: Echo на фронте — подписка `couple.{id}` + применение realtime к store. (depends on 24,23)
 <!-- Commit checkpoint: tasks 23-25 -->

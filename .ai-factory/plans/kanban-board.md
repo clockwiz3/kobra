@@ -46,10 +46,10 @@ Rationale: Это и есть реализация этого майлстоун
 <!-- Commit checkpoint: tasks 14-18 -->
 
 ### Phase 2: Backend couple-scoped
-- [ ] Task 19: Миграции boards/board_columns/cards/labels/card_label (couple-scoped, CASCADE, position) + docs/DATABASE.md + AGENTS.md.
-- [ ] Task 20: Модели + enum CardAssignee (CoupleScoped) + связи. (depends on 19)
-- [ ] Task 21: BoardService/CardService (CRUD/move/reorder, toggle-done → `task_completed` event). (depends on 20)
-- [ ] Task 22: Couple-scoped API (controllers/routes за auth+context+Policy, FormRequest, DTO). (depends on 21)
+- [x] Task 19: Миграции boards/board_columns/cards/labels/card_label (couple-scoped, CASCADE, position) + docs/DATABASE.md + AGENTS.md.
+- [x] Task 20: Модели + enum CardAssignee (CoupleScoped) + связи. (depends on 19)
+- [x] Task 21: BoardService/CardService (CRUD/move/reorder, toggle-done → `task_completed` event). (depends on 20)
+- [x] Task 22: Couple-scoped API (controllers/routes за auth+context+Policy, FormRequest, DTO). (depends on 21)
 <!-- Commit checkpoint: tasks 19-22 -->
 
 ### Phase 3: Интеграция фронт↔бэк + real-time

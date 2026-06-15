@@ -98,8 +98,8 @@ Pre-account данные, вне shard-системы. Реферал-машин
 <!-- Commit checkpoint: tasks 7-9 -->
 
 ### Phase 4: Telegram Bot + Notifications
-- [ ] Task 10: Telegram-бот — POST /telegram/webhook (secret), /start <link_token> линковка, TelegramService.sendMessage, artisan set-webhook. (depends on 6)
-- [ ] Task 11: **Доставка из outbox — warmth, не guilt** — SendNotificationJob (idempotent/retriable) + Email/Telegram каналы, подтверждение вайтлиста + позитивные couple-триггеры; джобы с явным couple_id + bind/clear CoupleContext. (depends on 6, 8, 10, 4)
+- [x] Task 10: Telegram-бот — POST /telegram/webhook (secret), /start <link_token> линковка, TelegramService.sendMessage, artisan set-webhook. (depends on 6)
+- [x] Task 11: **Доставка из outbox — warmth, не guilt** — SendNotificationJob (idempotent/retriable) + Email/Telegram каналы, подтверждение вайтлиста + позитивные couple-триггеры; джобы с явным couple_id + bind/clear CoupleContext. (depends on 6, 8, 10, 4)
 <!-- Commit checkpoint: tasks 10-11 -->
 
 ### Phase 5: In-shard Gamification + Tenancy Tests

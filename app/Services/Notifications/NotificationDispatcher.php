@@ -4,6 +4,7 @@ namespace App\Services\Notifications;
 
 use App\Enums\NotificationChannel;
 use App\Enums\NotificationStatus;
+use App\Jobs\SendNotificationJob;
 use App\Models\OutboxNotification;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
@@ -33,6 +34,9 @@ class NotificationDispatcher
         ]);
         $notification->notifiable()->associate($notifiable);
         $notification->save();
+
+        // Доставка из outbox (afterCommit — чтобы строка точно была закоммичена).
+        SendNotificationJob::dispatch($notification->id)->afterCommit();
 
         Log::info('[Outbox.enqueue] queued', [
             'notification_id' => $notification->id,

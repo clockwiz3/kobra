@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import draggable from 'vuedraggable'
-import type { Column } from '@/types/board'
+import type { Card, Column } from '@/types/board'
 import KanbanCard from './KanbanCard.vue'
 import { useBoardStore } from '@/stores/board'
 import { useLogger } from '@/composables/useLogger'
@@ -41,7 +41,9 @@ function remove() {
   }
 }
 
-function onCardChange() {
+function onCardChange(e: { added?: { element: Card; newIndex: number }; moved?: { element: Card; newIndex: number } }) {
+  const change = e.added ?? e.moved
+  if (change) store.persistCardMove(String(change.element.id), props.column.id, change.newIndex)
   log.debug('card-drop', { columnId: props.column.id })
 }
 </script>

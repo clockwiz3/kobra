@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "skills": {
+    "laravel-security": {
+      "source": "affaan-m/everything-claude-code",
+      "sourceType": "github",
+      "skillPath": "skills/laravel-security/SKILL.md",
+      "computedHash": "1d9dc74a708186365b87314a46fed932ed5f6b995ceb13c15624698dda9f8c7b"
+    },
+    "laravel-specialist": {
+      "source": "jeffallan/claude-skills",
+      "sourceType": "github",
+      "skillPath": "skills/laravel-specialist/SKILL.md",
+      "computedHash": "805be17bd59f759e2f2f2dcbd6bd205ca6678420a87b21da1c16e0793093615c"
+    },
+    "laravel-tdd": {
+      "source": "affaan-m/everything-claude-code",
+      "sourceType": "github",
+      "skillPath": "skills/laravel-tdd/SKILL.md",
+      "computedHash": "86f3d7efface8243b89a172c8b110dd9920269ac36cacfe63a68b478468ee515"
+    },
+    "telegram-bot": {
+      "source": "claude-office-skills/skills",
+      "sourceType": "github",
+      "skillPath": "telegram-bot/SKILL.md",
+      "computedHash": "987517b2bf10b114c441a15939e2e31dce3890f826e42d0a52efdba20270c3ce"
+    },
+    "vue": {
+      "source": "antfu/skills",
+      "sourceType": "github",
+      "skillPath": "skills/vue/SKILL.md",
+      "computedHash": "f72b54618560c53d65740515ded5bb833750c4574dbe961fd21f022bd2b31a74"
+    }
+  }
+}

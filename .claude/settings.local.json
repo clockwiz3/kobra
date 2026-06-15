@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(printenv HANDOFF_MODE)",
+      "Bash(printenv HANDOFF_TASK_ID)",
+      "Bash(printenv HANDOFF_BRANCH_PREPARED)"
+    ]
+  }
+}

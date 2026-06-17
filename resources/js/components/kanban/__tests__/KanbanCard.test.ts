@@ -21,6 +21,18 @@ afterEach(() => vi.useRealTimers())
 
 const mountCard = (card: Card) => mount(KanbanCard, { props: { card } })
 
+describe('KanbanCard — контракт vuedraggable', () => {
+  // Регрессия: ведущий комментарий в <template> делал компонент мульти-рутовым (fragment) в dev —
+  // vuedraggable терял контекст элемента (getUnderlyingVm → null), дроп ломался. Корень — РОВНО
+  // один элемент .task, без комментариев/текстовых узлов перед ним.
+  it('рендерит единственный корневой элемент .task (без ведущих узлов)', () => {
+    const w = mountCard(makeCard())
+    expect(w.element.nodeType).toBe(1) // ELEMENT_NODE, не комментарий (8) и не фрагмент
+    expect(w.element.tagName).toBe('DIV')
+    expect(w.classes()).toContain('task')
+  })
+})
+
 describe('KanbanCard — открытие панели', () => {
   it('клик по телу эмитит open', async () => {
     const w = mountCard(makeCard())

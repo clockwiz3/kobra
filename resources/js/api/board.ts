@@ -79,9 +79,6 @@ export const boardApi = {
     if (!res.ok) log.warn('[boardApi.updateCard] failed', { cardId, status: res.status })
     return jsonOrNull<ApiCard>(res)
   },
-  async toggleDone(cardId: number): Promise<ApiCard | null> {
-    return jsonOrNull<ApiCard>(await call('PATCH', `/cards/${cardId}/toggle-done`))
-  },
   async moveCard(cardId: number, columnId: number, position: number): Promise<ApiCard | null> {
     return jsonOrNull<ApiCard>(await call('PATCH', `/cards/${cardId}/move`, { column_id: columnId, position }))
   },

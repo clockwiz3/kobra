@@ -308,6 +308,8 @@ section.block { padding: 72px 0; border-top: 1px solid var(--border); }
 [data-theme="pixel"] .chip { font-size: 15px; border-width: 2px; }
 .chip.solid { background: var(--grad); color: var(--accent-ink); border-color: transparent; }
 [data-theme="pixel"] .chip.solid { background: var(--accent); }
+/* warn-чип: та же геометрия .chip, отличие только в цвете/фоне (акцент дедлайна) */
+.chip.warn { background: color-mix(in srgb, var(--warning) 16%, transparent); color: var(--warning); border-color: color-mix(in srgb, var(--warning) 35%, transparent); }
 .chip .x { color: var(--text-muted); cursor: pointer; }
 
 /* ============================================================
@@ -462,3 +464,296 @@ section.block { padding: 72px 0; border-top: 1px solid var(--border); }
   .col2, .col3 { grid-template-columns: 1fr; }
   .wrap { padding: 0 20px; }
 }
+
+/* ============================================================
+   SCROLLBARS — .ds-scroll (тематический, верт + гориз)
+   ВАЖНО: правила заданы ПО-ТЕМОЧНО литералами, НЕ через общие var().
+   WebKit не перерисовывает ::-webkit-scrollbar при смене значения var()
+   → при переключении темы скролл «застывал» в одном цвете. Смена
+   [data-theme] переключает САМО правило (другой селектор) → форсит
+   repaint и даёт явно разный цвет на каждую тему.
+   ============================================================ */
+.ds-scroll::-webkit-scrollbar { width: 12px; height: 12px; }   /* верт + гориз */
+.ds-scroll::-webkit-scrollbar-thumb { border: 3px solid transparent; background-clip: padding-box; border-radius: var(--r-pill); }
+.ds-scroll::-webkit-scrollbar-corner { background: transparent; }
+
+/* DARK — неоновый розово-сиреневый ползунок на тёмном треке */
+[data-theme="dark"] .ds-scroll { scrollbar-width: thin; scrollbar-color: #9d7bff transparent; }
+[data-theme="dark"] .ds-scroll::-webkit-scrollbar-track { background: rgba(255,255,255,.06); border-radius: var(--r-pill); }
+[data-theme="dark"] .ds-scroll::-webkit-scrollbar-thumb { background: linear-gradient(135deg,#FF6B9D,#7C5CFC); background-clip: padding-box; }
+[data-theme="dark"] .ds-scroll::-webkit-scrollbar-thumb:hover { background: #7C5CFC; background-clip: padding-box; }
+
+/* LIGHT — тёплый карамельно-бронзовый ползунок на кремовом треке (под ретро-крем) */
+[data-theme="light"] .ds-scroll { scrollbar-width: thin; scrollbar-color: #A06A38 #E7D3BB; }
+[data-theme="light"] .ds-scroll::-webkit-scrollbar-track { background: #E7D3BB; border-radius: var(--r-pill); }
+[data-theme="light"] .ds-scroll::-webkit-scrollbar-thumb { background: linear-gradient(135deg,#BD854A,#8C5E2E); background-clip: padding-box; }
+[data-theme="light"] .ds-scroll::-webkit-scrollbar-thumb:hover { background: #714823; background-clip: padding-box; }
+
+/* PIXEL — плоский неон-розовый с жёсткой чёрной рамкой на фиолетовом треке (8-бит) */
+[data-theme="pixel"] .ds-scroll { scrollbar-width: auto; scrollbar-color: #FF5C8A #34205C; }
+[data-theme="pixel"] .ds-scroll::-webkit-scrollbar { width: 16px; height: 16px; }
+[data-theme="pixel"] .ds-scroll::-webkit-scrollbar-track { background: #34205C; border: 2px solid #15092B; }
+[data-theme="pixel"] .ds-scroll::-webkit-scrollbar-thumb { background: #FF5C8A; border: 3px solid #15092B; background-clip: padding-box; border-radius: 0; }
+[data-theme="pixel"] .ds-scroll::-webkit-scrollbar-thumb:hover { background: #8A6BFF; background-clip: padding-box; }
+
+/* ============================================================
+   A11Y UTILS
+   ============================================================ */
+/* визуально скрытый, но доступный экранным читалкам/форме нативный контрол */
+.sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+
+/* ============================================================
+   OVERLAY + MODAL (диалоги ДС — замена браузерных confirm/alert)
+   z-index выше topbar (40). Темизируется на общих токенах.
+   ============================================================ */
+.overlay {
+  position: fixed; inset: 0; z-index: 100;
+  display: flex; align-items: center; justify-content: center; padding: 20px;
+  background: color-mix(in srgb, var(--bg) 60%, rgba(0,0,0,.55));
+  backdrop-filter: blur(6px);
+}
+[data-theme="pixel"] .overlay { backdrop-filter: none; background: color-mix(in srgb, var(--bg) 48%, rgba(0,0,0,.72)); }
+
+.modal {
+  width: min(92vw, 460px); max-height: 88vh;
+  display: flex; flex-direction: column;
+  background: var(--surface); border: 1px solid var(--border-strong);
+  border-radius: var(--r-lg); box-shadow: var(--shadow), var(--inner-glow);
+  overflow: hidden;
+}
+[data-theme="pixel"] .modal { border-width: 4px; box-shadow: var(--shadow); }
+.modal--sm { width: min(92vw, 380px); }
+.modal--lg { width: min(94vw, 720px); }
+
+.modal__head { display: flex; align-items: flex-start; gap: 12px; padding: 20px 22px 0; }
+.modal__title { font-family: var(--font-head); font-weight: 600; font-size: 22px; flex: 1; line-height: 1.15; }
+[data-theme="pixel"] .modal__title { font-size: 17px; }
+.modal__close {
+  flex: none; width: 34px; height: 34px; display: grid; place-items: center;
+  background: transparent; border: 0; border-radius: var(--r-pill); cursor: pointer;
+  color: var(--text-muted); font-size: 24px; line-height: 1; transition: color .18s, background .18s;
+}
+.modal__close:hover { color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, transparent); }
+[data-theme="pixel"] .modal__close { border-radius: 0; }
+.modal__body { padding: 14px 22px 22px; overflow-y: auto; }
+.modal__msg { color: var(--text-muted); font-size: 15px; line-height: 1.55; }
+.modal__foot {
+  display: flex; justify-content: flex-end; gap: 10px; flex-wrap: wrap;
+  padding: 16px 22px; border-top: 1px solid var(--border);
+  background: color-mix(in srgb, var(--surface-2) 45%, transparent);
+}
+[data-theme="pixel"] .modal__foot { border-top-width: 3px; }
+
+/* Vue <Transition name="modal"> — fade overlay + lift panel (reduced-motion: гасится глобальным media-правилом и пропуском name в компоненте) */
+.modal-enter-active, .modal-leave-active { transition: opacity .22s var(--ease); }
+.modal-enter-active .modal, .modal-leave-active .modal { transition: transform .24s var(--ease), opacity .24s var(--ease); }
+.modal-enter-from, .modal-leave-to { opacity: 0; }
+.modal-enter-from .modal, .modal-leave-to .modal { transform: translateY(10px) scale(.98); opacity: 0; }
+
+/* ============================================================
+   DRAWER (выезжающая боковая панель ДС) — BaseDrawer.vue
+   Тот же overlay-слой (z 100), панель прижата к краю на всю высоту.
+   ============================================================ */
+.drawer-overlay {
+  position: fixed; inset: 0; z-index: 100;
+  display: flex;
+  background: color-mix(in srgb, var(--bg) 60%, rgba(0,0,0,.55));
+  backdrop-filter: blur(6px);
+}
+.drawer-overlay.is-right { justify-content: flex-end; }
+.drawer-overlay.is-left { justify-content: flex-start; }
+[data-theme="pixel"] .drawer-overlay { backdrop-filter: none; background: color-mix(in srgb, var(--bg) 48%, rgba(0,0,0,.72)); }
+
+.drawer {
+  height: 100%; max-width: 100vw; box-sizing: border-box;
+  display: flex; flex-direction: column;
+  background: var(--surface); box-shadow: var(--shadow), var(--inner-glow);
+  overflow: hidden;
+}
+/* радиус только на свободных (внутренних) углах; в pixel --r-* = 0 → углы прямые */
+.drawer--right { border-left: 1px solid var(--border-strong); border-top-left-radius: var(--r-lg); border-bottom-left-radius: var(--r-lg); }
+.drawer--left { border-right: 1px solid var(--border-strong); border-top-right-radius: var(--r-lg); border-bottom-right-radius: var(--r-lg); }
+.drawer--sm { width: min(100vw, 360px); }
+.drawer--md { width: min(100vw, 480px); }
+.drawer--lg { width: min(100vw, 640px); }
+/* pixel: панель (--surface) лежит на очень тёмном overlay → безбордюрные кромки
+   светлой панели читались как «белая» граница. Даём полный контрастный hard-frame
+   по открытым кромкам (как у календаря/модалки). Прилегающую к краю экрана сторону
+   бордюрит .drawer--right/--left ниже. */
+[data-theme="pixel"] .drawer {
+  border-top: 4px solid var(--border-strong);
+  border-bottom: 4px solid var(--border-strong);
+  box-shadow: var(--shadow);
+}
+[data-theme="pixel"] .drawer--right { border-left-width: 4px; }
+[data-theme="pixel"] .drawer--left { border-right-width: 4px; }
+
+.drawer__head { display: flex; align-items: flex-start; gap: 12px; padding: 20px 22px 0; }
+.drawer__title { font-family: var(--font-head); font-weight: 600; font-size: 22px; flex: 1; line-height: 1.15; }
+[data-theme="pixel"] .drawer__title { font-size: 17px; }
+.drawer__close {
+  flex: none; width: 34px; height: 34px; display: grid; place-items: center;
+  background: transparent; border: 0; border-radius: var(--r-pill); cursor: pointer;
+  color: var(--text-muted); font-size: 24px; line-height: 1; transition: color .18s, background .18s;
+}
+.drawer__close:hover { color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, transparent); }
+[data-theme="pixel"] .drawer__close { border-radius: 0; }
+.drawer__body { padding: 14px 22px 22px; overflow-y: auto; flex: 1; }
+.drawer__foot {
+  display: flex; justify-content: flex-end; gap: 10px; flex-wrap: wrap;
+  padding: 16px 22px; border-top: 1px solid var(--border);
+  background: color-mix(in srgb, var(--surface-2) 45%, transparent);
+}
+[data-theme="pixel"] .drawer__foot { border-top-width: 3px; }
+
+/* Vue <Transition name="drawer-right|drawer-left"> — fade overlay + slide panel с края */
+.drawer-right-enter-active, .drawer-right-leave-active,
+.drawer-left-enter-active, .drawer-left-leave-active { transition: opacity .24s var(--ease); }
+.drawer-right-enter-active .drawer, .drawer-right-leave-active .drawer,
+.drawer-left-enter-active .drawer, .drawer-left-leave-active .drawer { transition: transform .26s var(--ease); }
+.drawer-right-enter-from, .drawer-right-leave-to,
+.drawer-left-enter-from, .drawer-left-leave-to { opacity: 0; }
+.drawer-right-enter-from .drawer, .drawer-right-leave-to .drawer { transform: translateX(100%); }
+.drawer-left-enter-from .drawer, .drawer-left-leave-to .drawer { transform: translateX(-100%); }
+
+/* ============================================================
+   DATEPICKER (BaseDatePicker.vue) — поле-триггер + month-grid поповер
+   ============================================================ */
+.datepicker { position: relative; }
+.datepicker__field { position: relative; display: flex; align-items: center; }
+.datepicker__trigger { text-align: left; cursor: pointer; padding-right: 38px; }
+.datepicker__trigger.is-empty { color: var(--text-muted); }
+.datepicker__trigger:focus { border-color: var(--accent); box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 22%, transparent); }
+.datepicker__clear {
+  position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
+  width: 24px; height: 24px; display: grid; place-items: center;
+  background: transparent; border: 0; border-radius: var(--r-pill); cursor: pointer;
+  color: var(--text-muted); font-size: 18px; line-height: 1; transition: color .18s, background .18s;
+}
+.datepicker__clear:hover { color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, transparent); }
+[data-theme="pixel"] .datepicker__clear { border-radius: 0; }
+
+.datepicker__pop {
+  position: absolute; z-index: 110; top: calc(100% + 6px); left: 0; min-width: 280px;
+  background: var(--surface); border: 1px solid var(--border-strong);
+  border-radius: var(--r-md); box-shadow: var(--shadow), var(--inner-glow);
+  padding: 12px;
+}
+[data-theme="pixel"] .datepicker__pop { border-width: 3px; box-shadow: var(--shadow); }
+
+.datepicker__nav { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+.datepicker__month { font-family: var(--font-head); font-weight: 600; font-size: 15px; }
+[data-theme="pixel"] .datepicker__month { font-family: var(--font-body); }
+.datepicker__navbtn {
+  width: 30px; height: 30px; display: grid; place-items: center;
+  background: transparent; border: 1px solid var(--border); border-radius: var(--r-sm);
+  color: var(--text); font-size: 18px; line-height: 1; cursor: pointer;
+  transition: border-color .18s, color .18s, transform .15s var(--ease), box-shadow .2s var(--ease);
+}
+.datepicker__navbtn:hover { border-color: var(--accent); color: var(--accent); }
+/* pixel: «объём» при хавере как у кнопок — приподнятая плитка с жёсткой тенью */
+[data-theme="pixel"] .datepicker__navbtn { border-color: var(--border-strong); box-shadow: var(--shadow-sm); }
+[data-theme="pixel"] .datepicker__navbtn:hover { transform: translate(-2px, -2px); box-shadow: 5px 5px 0 var(--border-strong); }
+[data-theme="pixel"] .datepicker__navbtn:active { transform: translate(2px, 2px); box-shadow: 2px 2px 0 var(--border-strong); }
+
+.datepicker__grid { display: flex; flex-direction: column; gap: 2px; }
+.datepicker__row { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+.datepicker__dowcell { text-align: center; font-size: 11px; color: var(--text-muted); padding: 4px 0; }
+.datepicker__day {
+  aspect-ratio: 1; min-width: 34px; display: grid; place-items: center;
+  background: transparent; border: 1px solid transparent; border-radius: var(--r-sm);
+  color: var(--text); font-size: 13px; cursor: pointer;
+  transition: background .14s, color .14s, border-color .14s, transform .14s var(--ease), box-shadow .14s var(--ease);
+}
+.datepicker__day:hover:not(:disabled) { border-color: var(--accent); }
+.datepicker__day.is-other { color: var(--text-muted); opacity: .55; }
+.datepicker__day.is-today { font-weight: 700; border-color: var(--border-strong); }
+.datepicker__day.is-in-range { background: color-mix(in srgb, var(--accent) 16%, transparent); border-radius: 0; }
+.datepicker__day.is-selected { background: var(--grad); color: var(--accent-ink); border-color: transparent; }
+.datepicker__day.is-disabled, .datepicker__day:disabled { opacity: .3; cursor: not-allowed; }
+.datepicker__day:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+[data-theme="pixel"] .datepicker__day { border-radius: 0; }
+/* pixel: «объём» при хавере как у кнопок — плитка приподнимается с жёсткой тенью */
+[data-theme="pixel"] .datepicker__day:hover:not(:disabled) {
+  border-color: var(--border-strong);
+  transform: translate(-2px, -2px);
+  box-shadow: 3px 3px 0 var(--border-strong);
+}
+[data-theme="pixel"] .datepicker__day:active:not(:disabled) {
+  transform: translate(1px, 1px);
+  box-shadow: 1px 1px 0 var(--border-strong);
+}
+
+.datepicker__actions { display: flex; justify-content: flex-end; margin-top: 8px; }
+.datepicker__clearbtn {
+  background: transparent; border: 0; color: var(--text-muted); font-size: 13px; cursor: pointer; padding: 4px 6px;
+}
+.datepicker__clearbtn:hover { color: var(--accent); }
+
+/* ============================================================
+   CHOICE CONTROLS — checkbox / radio
+   Паттерн: нативный <input class="sr-only"> + визуальный бокс/точка,
+   обёрнутые в <label>. Состояние ведём через input:checked + .box.
+   ============================================================ */
+.checkbox, .radio {
+  display: inline-flex; align-items: center; gap: 10px; cursor: pointer;
+  font-family: var(--font-body); font-size: 15px; color: var(--text); line-height: 1.3; user-select: none;
+}
+.checkbox.is-disabled, .radio.is-disabled { opacity: .5; cursor: not-allowed; }
+[data-theme="pixel"] .checkbox, [data-theme="pixel"] .radio { font-size: 16px; }
+
+/* checkbox box */
+.checkbox__box {
+  flex: none; width: 24px; height: 24px; border-radius: var(--r-sm);
+  border: 2px solid var(--border-strong); background: var(--surface-2);
+  display: grid; place-items: center; color: transparent;
+  transition: background .18s var(--ease), border-color .18s, color .18s;
+}
+[data-theme="pixel"] .checkbox__box { border-radius: 0; border-width: 3px; box-shadow: 2px 2px 0 var(--border); }
+.checkbox__box svg { width: 15px; height: 15px; }
+.checkbox input:checked + .checkbox__box,
+.checkbox input:indeterminate + .checkbox__box { background: var(--grad); border-color: transparent; color: var(--accent-ink); }
+[data-theme="pixel"] .checkbox input:checked + .checkbox__box,
+[data-theme="pixel"] .checkbox input:indeterminate + .checkbox__box { background: var(--accent); }
+.checkbox input:focus-visible + .checkbox__box { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* radio dot */
+.radio__dot {
+  flex: none; width: 24px; height: 24px; border-radius: var(--r-pill);
+  border: 2px solid var(--border-strong); background: var(--surface-2);
+  display: grid; place-items: center;
+  transition: border-color .18s var(--ease), background .18s;
+}
+[data-theme="pixel"] .radio__dot { border-radius: 0; border-width: 3px; box-shadow: 2px 2px 0 var(--border); }
+.radio__dot::after {
+  content: ""; width: 10px; height: 10px; border-radius: var(--r-pill);
+  background: var(--grad); transform: scale(0); transition: transform .18s var(--ease);
+}
+[data-theme="pixel"] .radio__dot::after { border-radius: 0; width: 8px; height: 8px; background: var(--accent); }
+.radio input:checked + .radio__dot { border-color: var(--accent); }
+.radio input:checked + .radio__dot::after { transform: scale(1); }
+.radio input:focus-visible + .radio__dot { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* ============================================================
+   CHOICE ROWS — выбираемые опции-карточки (radio внутри),
+   подсветка выбранного как у .palette[aria-pressed]
+   ============================================================ */
+.choice-list { display: flex; flex-direction: column; gap: 10px; margin-top: 4px; }
+.choice {
+  display: block; overflow: hidden;
+  border: 1px solid var(--border-strong); border-radius: var(--r-md);
+  background: var(--surface-2); cursor: pointer;
+  transition: border-color .18s var(--ease), box-shadow .18s, background .18s;
+}
+[data-theme="pixel"] .choice { border-width: 3px; }
+.choice:hover { border-color: var(--accent); }
+.choice.is-selected { border-color: var(--accent); box-shadow: var(--glow); }
+[data-theme="pixel"] .choice.is-selected { box-shadow: var(--shadow-sm); }
+/* padding на самой label → кликабельна вся площадь карточки */
+.choice .radio { width: 100%; padding: 14px 16px; align-items: flex-start; }
+.choice__text { display: flex; flex-direction: column; gap: 3px; }
+.choice__label { font-weight: 600; font-size: 15px; color: var(--text); }
+.choice__hint { font-size: 13px; color: var(--text-muted); font-weight: 400; }

@@ -20,6 +20,7 @@ class Card extends Model
         return [
             'assignee' => CardAssignee::class,
             'due_at' => 'datetime',
+            'due_end_at' => 'datetime',
             'completed_at' => 'datetime',
             'done' => 'boolean',
             'position' => 'integer',

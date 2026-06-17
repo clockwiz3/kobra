@@ -3,8 +3,8 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <meta name="theme-color" content="#0F0F17" />
-    <title>Cuploid</title>
+    <meta name="theme-color" content="#F4E7D6" />
+    <title>Kobra</title>
 
     {{-- Шрифты дизайн-системы (позже — самохостинг для PWA-offline) --}}
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -17,6 +17,6 @@
 </head>
 <body>
     {{-- Корень дизайн-системы: тема/гамма ставит useTheme() из localStorage --}}
-    <div id="app" class="ds-root" data-theme="dark" data-accent="honey"></div>
+    <div id="app" class="ds-root" data-theme="light" data-accent="honey"></div>
 </body>
 </html>

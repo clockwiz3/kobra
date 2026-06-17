@@ -7,6 +7,16 @@
 <a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
 </p>
 
+## Документация
+
+| Документ | Описание |
+|----------|----------|
+| [Дизайн-система](docs/DESIGN-SYSTEM.md) | Токены, темы (`dark`/`light`/`pixel`), гаммы |
+| [UI-библиотека компонентов](docs/ui-library.md) | Modal, Checkbox, Radio, ConfirmDialog, `useConfirm`; конвенции библиотеки |
+| [База данных](docs/DATABASE.md) | ERD и реестр couple-owned таблиц |
+
+---
+
 ## About Laravel
 
 Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:

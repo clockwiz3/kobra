@@ -12,7 +12,7 @@ withDefaults(
     type?: string
     multiline?: boolean
     autocomplete?: string
-    inputmode?: string
+    inputmode?: 'search' | 'text' | 'email' | 'tel' | 'url' | 'none' | 'numeric' | 'decimal'
   }>(),
   { type: 'text', multiline: false },
 )

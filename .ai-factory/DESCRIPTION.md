@@ -23,7 +23,7 @@
 - **Auth:** Laravel Sanctum (passwordless-ready, Telegram-link)
 - **Realtime:** Laravel Reverb + Laravel Echo (приватные каналы `couple.{id}`) — добавляется на milestone Kanban
 - **Queues:** Redis + `queue:work` (Horizon — только на прод-Linux; на Windows-деве недоступен: ext-pcntl). Сейчас dev-дефолт `QUEUE_CONNECTION=sync`
-- **Frontend tooling:** Vite 8, Pinia, Vue Router, Tailwind CSS v4 (`@theme`), vite-plugin-pwa
+- **Frontend tooling:** Vite 8, Pinia, Vue Router, Tailwind CSS v4 (`@theme`), vite-plugin-pwa; dayjs (даты/дейтпикер, ru-локаль); Vitest + @vue/test-utils + jsdom (компонентные тесты)
 - **Type bridge:** spatie/laravel-data + typescript-transformer (end-to-end типы PHP → TS)
 - **Integrations:** Telegram Bot API, SMTP/email
 - **Mobile:** PWA → Capacitor

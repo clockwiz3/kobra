@@ -41,6 +41,20 @@ export const useBoardStore = defineStore('board', () => {
   const dragging = ref(false)
   // id карточки, открытой в выезжающей панели параметров (null — панель закрыта)
   const selectedCardId = ref<string | null>(null)
+  // id карточки, ТОЛЬКО ЧТО закрытой переносом в терминал (переход done false→true).
+  // Триггер ретро-анимации закрытия (pixel): KanbanCard вешает .just-closed по совпадению id.
+  // Сам сбрасывается через ANIM_MS — НЕ играет на загрузке/перерисовке (на старте null).
+  // Класс выводится из стора (computed), а не из локального состояния компонента — так он
+  // переживает пересоздание инстанса карточки при cross-column DnD (vuedraggable).
+  const justClosedCardId = ref<string | null>(null)
+  let justClosedTimer: ReturnType<typeof setTimeout> | null = null
+  const JUST_CLOSED_MS = 700 // вся секвенция: левая полоса → правая → тряска
+
+  function markJustClosed(cardId: string): void {
+    justClosedCardId.value = cardId
+    if (justClosedTimer !== null) clearTimeout(justClosedTimer)
+    justClosedTimer = setTimeout(() => { justClosedCardId.value = null; justClosedTimer = null }, JUST_CLOSED_MS)
+  }
 
   const totalCards = computed(() => columns.value.reduce((s, c) => s + c.cards.length, 0))
 
@@ -134,7 +148,10 @@ export const useBoardStore = defineStore('board', () => {
   async function persistCardMove(cardId: string, toColumnId: string, toIndex: number): Promise<void> {
     const found = findCard(cardId)
     const target = columns.value.find((c) => c.id === toColumnId)
+    const wasDone = found?.card.done ?? false
     if (found && target) found.card.done = target.isTerminal // оптимистично, в т.ч. мок
+    // переход «в работе» → «выполнено»: триггер анимации закрытия (только false→true)
+    if (found && target?.isTerminal && !wasDone) markJustClosed(cardId)
     if (backed.value) {
       const api = await boardApi.moveCard(Number(cardId), Number(toColumnId), toIndex)
       if (!api) await fetchBoard()
@@ -201,6 +218,7 @@ export const useBoardStore = defineStore('board', () => {
   return {
     columns, boardId, backed, loading, dragging, totalCards, findCard,
     selectedCardId, selectedCard, openCard, closeCard,
+    justClosedCardId,
     fetchBoard, addCard, updateCard, removeCard, persistCardMove,
     addColumn, renameColumn, removeColumn, persistColumnReorder,
   }

@@ -6,6 +6,11 @@ import { BaseChip } from '@/components/ui'
 import { formatRange } from '@/lib/date'
 import { useLogger } from '@/composables/useLogger'
 
+// Завершение задачи теперь — перенос в терминальную колонку «Готово» (не галочка).
+// .done остаётся как визуальная подсветка закрытых карточек (зачёркивание/прозрачность).
+// ВАЖНО: корень <template> — РОВНО один элемент <div.task>, без ведущих комментариев/узлов:
+// в dev Vue не вырезает комментарии → компонент стал бы мульти-рутовым (fragment), и
+// vuedraggable терял бы контекст перетаскиваемого элемента (getUnderlyingVm → null) → дроп ломался.
 const props = defineProps<{ card: Card }>()
 const emit = defineEmits<{ remove: []; open: [] }>()
 const store = useBoardStore()
@@ -40,8 +45,6 @@ function openCard() {
 </script>
 
 <template>
-  <!-- Завершение задачи теперь — перенос в терминальную колонку «Готово» (не галочка).
-       .done остаётся как визуальная подсветка закрытых карточек (зачёркивание/прозрачность). -->
   <div class="task" :class="{ done: card.done }">
     <div
       class="task__body"

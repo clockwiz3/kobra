@@ -1,11 +1,11 @@
 /**
- * useTheme — runtime дизайн-системы Cuploid.
+ * useTheme — runtime дизайн-системы Kobra.
  *
  * Управляет атрибутами [data-theme] и [data-accent] на корневом элементе .ds-root
  * (см. resources/css/themes.css). Заменяет inline-IIFE из прототипа Claude Design
  * на Vue-идиоматичный composable с персистом.
  *
- * Темы:   dark (основная) · light (кремовая ретро) · pixel (8-бит)
+ * Темы:   light (кремовая ретро, по умолчанию) · dark · pixel (8-бит)
  * Гаммы:  rose · sunset · honey · berry · lagoon (default — honey, по решению дизайна)
  *
  * NB (couple-as-shard): сейчас выбор персистится per-device (localStorage). Когда появится
@@ -34,7 +34,7 @@ function persist(key: string, value: string): void {
 }
 
 // Singleton-состояние: одно на приложение.
-const theme = ref<Theme>(read(THEME_KEY, 'dark', THEMES))
+const theme = ref<Theme>(read(THEME_KEY, 'light', THEMES))
 const accent = ref<Accent>(read(ACCENT_KEY, 'honey', ACCENTS))
 
 function applyTo(el: HTMLElement | null): void {

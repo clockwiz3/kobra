@@ -16,6 +16,12 @@ const emit = defineEmits<{ remove: []; open: [] }>()
 const store = useBoardStore()
 const log = useLogger('KanbanCard')
 
+// Ретро-анимация закрытия (pixel): .just-closed выводится из стора (а не из локального состояния),
+// поэтому переживает пересоздание инстанса карточки при cross-column DnD. store.justClosedCardId
+// выставляется при переносе в терминал (done false→true) и сам гаснет через ~700мс → на загрузке/
+// перерисовке уже-закрытых карточек анимация не играет.
+const isJustClosed = computed(() => store.justClosedCardId === props.card.id)
+
 const assigneeLabel = computed(() => {
   return { him: 'Он', her: 'Она', together: '♥ Вместе' }[props.card.assignee]
 })
@@ -45,7 +51,7 @@ function openCard() {
 </script>
 
 <template>
-  <div class="task" :class="{ done: card.done }">
+  <div class="task" :class="{ done: card.done, 'just-closed': isJustClosed }">
     <div
       class="task__body"
       role="button"

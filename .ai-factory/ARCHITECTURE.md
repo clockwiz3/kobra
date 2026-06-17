@@ -25,6 +25,7 @@ app/
 │   ├── Requests/               # FormRequest-валидация
 │   └── Middleware/ResolveCoupleContext.php
 ├── Services/                    # доменная логика по модулям
+│   ├── Identity/               # AuthService (Sanctum token login/logout; закрытый запуск)
 │   ├── Couples/                # CoupleInvitationService, CoupleDeletionService (lifecycle шарда)
 │   ├── Gamification/           # GamificationService (XP/стрик/ачивки)
 │   ├── Waitlist/               # WaitlistService (double-opt-in)

@@ -3,6 +3,7 @@ import { onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { confirmWaitlist, getWaitlistStatus } from '@/api/waitlist'
 import { useLogger } from '@/composables/useLogger'
+import BrandMark from '@/components/ui/BrandMark.vue'
 
 const log = useLogger('WaitlistConfirm')
 const route = useRoute()
@@ -38,7 +39,7 @@ onMounted(async () => {
 <template>
   <header class="topbar">
     <div class="wrap row">
-      <div class="brandmark"><span class="dot">&hearts;</span> Cuploid</div>
+      <BrandMark />
     </div>
   </header>
 

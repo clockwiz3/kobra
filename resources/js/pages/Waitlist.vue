@@ -3,6 +3,7 @@ import ThemeSwitch from '@/components/ui/ThemeSwitch.vue'
 import BaseCard from '@/components/ui/BaseCard.vue'
 import WaitlistForm from '@/components/WaitlistForm.vue'
 import ParticlesTeaser from '@/components/ParticlesTeaser.vue'
+import BrandMark from '@/components/ui/BrandMark.vue'
 
 const features = [
   { t: 'Канбан вдвоём', d: 'Общие дела пары — карточки и статусы, всё синхронно у обоих.' },
@@ -15,7 +16,7 @@ const features = [
 <template>
   <header class="topbar">
     <div class="wrap row">
-      <div class="brandmark"><span class="dot">&hearts;</span> Cuploid</div>
+      <BrandMark />
       <ThemeSwitch />
     </div>
   </header>
@@ -26,7 +27,7 @@ const features = [
       <span class="kicker">&hearts; Приватный трекер дел — для двоих</span>
       <h1>Делать дела <span class="grad">вместе</span><br />намного нежнее.</h1>
       <p class="lead">
-        Cuploid — закрытое пространство для пары: общие задачи, вишлисты и тёплая геймификация.
+        Kobra — закрытое пространство для пары: общие задачи, вишлисты и тёплая геймификация.
         Запускаемся скоро — занимай место.
       </p>
       <div style="margin-top: 28px"><WaitlistForm /></div>
@@ -49,7 +50,7 @@ const features = [
 
   <footer class="block" style="text-align: center">
     <div class="wrap">
-      <div class="brandmark" style="justify-content: center"><span class="dot">&hearts;</span> Cuploid</div>
+      <BrandMark style="justify-content: center" />
       <p class="sec-sub" style="margin: 12px auto 0">Закрытый запуск · сделано с любовью для двоих</p>
     </div>
   </footer>

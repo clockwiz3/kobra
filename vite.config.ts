@@ -16,12 +16,12 @@ export default defineConfig({
       registerType: 'prompt', // контролируемое обновление (см. skill pwa)
       injectRegister: 'auto',
       manifest: {
-        name: 'Cuploid',
-        short_name: 'Cuploid',
+        name: 'Kobra',
+        short_name: 'Kobra',
         description: 'Приватный таск-трекер для пар',
         lang: 'ru',
-        theme_color: '#0F0F17',
-        background_color: '#0F0F17',
+        theme_color: '#F4E7D6',
+        background_color: '#F4E7D6',
         display: 'standalone',
         start_url: '/',
         icons: [

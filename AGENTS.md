@@ -32,7 +32,8 @@ cuploid/
 │   └── Scopes/               # CoupleScope (fail-closed tenancy)
 ├── database/migrations/      # Миграции (пиннированный порядок, couple_id FK CASCADE)
 ├── resources/js/             # Vue 3 + TS frontend (планируется)
-│   ├── pages/  components/  stores/  composables/  api/
+│   ├── pages/  stores/  composables/  api/  lib/ (date-утилиты, dayjs)
+│   └── components/{ui, composite, kanban}  # ui — примитивы ДС; composite — составные виджеты
 ├── routes/                   # api.php, channels.php (Reverb couple.{id})
 ├── tests/                    # Pest/PHPUnit (Feature/Tenancy — leak-harness)
 ├── docs/                     # docs/DATABASE.md (ERD + closed-list couple-owned таблиц)
@@ -58,6 +59,9 @@ cuploid/
 | Документ | Путь | Описание |
 |----------|------|----------|
 | README | README.md | Лендинг-страница проекта (ведётся `/aif-docs`) |
+| Дизайн-система | `docs/DESIGN-SYSTEM.md` | Токены, темы (dark/light/pixel), гаммы |
+| UI-библиотека | `docs/ui-library.md` | Vue-компоненты ДС: Modal, Checkbox, Radio, ConfirmDialog, useConfirm |
+| База данных | `docs/DATABASE.md` | ERD и реестр couple-owned таблиц |
 
 ## AI Context Files
 

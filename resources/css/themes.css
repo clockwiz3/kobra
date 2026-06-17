@@ -404,6 +404,60 @@ section.block { padding: 72px 0; border-top: 1px solid var(--border); }
 [data-theme="pixel"] .task.done .check { background: var(--accent); }
 .task .tt { font-weight: 600; font-size: 15px; }
 .task.done .tt { text-decoration: line-through; }
+
+/* pixel-тема: закрытая карточка перечёркнута красным крест-накрест — ретро-«выполнено».
+   Рамка и крест СТАТИЧНЫ — видны сразу у любой закрытой карточки (в т.ч. после перезагрузки).
+   Анимация (рисование полос + тряска) играет ТОЛЬКО в момент закрытия — по классу .just-closed,
+   который KanbanCard навешивает на переход done false→true (одноразовый store.justClosedCardId).
+   Оверлеи pointer-events:none — карточка остаётся кликабельной/перетаскиваемой. */
+[data-theme="pixel"] .task.done {
+  position: relative;
+  opacity: 1; /* в пикселе не приглушаем — вместо этого яркое перечёркивание */
+  border-color: var(--error);
+  background: color-mix(in srgb, var(--error) 12%, var(--surface-2));
+}
+[data-theme="pixel"] .task.done .tt { color: var(--error); }
+[data-theme="pixel"] .task.done::before,
+[data-theme="pixel"] .task.done::after {
+  content: "";
+  position: absolute;
+  inset: -2px; /* перекрыть бордер (border-width:2px у pixel .task) */
+  pointer-events: none;
+}
+/* левая полоса «\» */
+[data-theme="pixel"] .task.done::before {
+  background: linear-gradient(to top right, transparent calc(50% - 3px), var(--error) calc(50% - 3px), var(--error) calc(50% + 3px), transparent calc(50% + 3px));
+}
+/* правая полоса «/» */
+[data-theme="pixel"] .task.done::after {
+  background: linear-gradient(to bottom right, transparent calc(50% - 3px), var(--error) calc(50% - 3px), var(--error) calc(50% + 3px), transparent calc(50% + 3px));
+}
+
+/* Момент закрытия: полосы рисуются поочерёдно (сперва левая, затем правая) + лёгкая тряска.
+   Тряска ТОЛЬКО горизонтальная (без сдвига по вертикали/поворота) — иначе карточка вылезает за
+   content-box колонки и появляется скролл; горизонталь клиппится overflow-x:hidden у списка. */
+[data-theme="pixel"] .task.done.just-closed { animation: pixel-done-shake 280ms ease-in-out 300ms 1; }
+[data-theme="pixel"] .task.done.just-closed::before { animation: pixel-done-stripe 150ms steps(3) both; }
+[data-theme="pixel"] .task.done.just-closed::after  { animation: pixel-done-stripe 150ms steps(3) 150ms both; }
+
+@keyframes pixel-done-stripe {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes pixel-done-shake {
+  0%, 100% { transform: translateX(0); }
+  20%      { transform: translateX(-3px); }
+  40%      { transform: translateX(3px); }
+  60%      { transform: translateX(-2px); }
+  80%      { transform: translateX(2px); }
+}
+
+/* доступность: при reduced-motion — без анимаций (крест и рамка и так видны статично) */
+@media (prefers-reduced-motion: reduce) {
+  [data-theme="pixel"] .task.done.just-closed,
+  [data-theme="pixel"] .task.done.just-closed::before,
+  [data-theme="pixel"] .task.done.just-closed::after { animation: none; }
+}
 .task .tm { color: var(--text-muted); font-size: 12.5px; margin-top: 4px; display:flex; gap: 8px; align-items:center; flex-wrap: wrap; }
 
 /* ============================================================

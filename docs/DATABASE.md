@@ -213,7 +213,7 @@ erDiagram
 ## DOCUMENT-ONLY (будущие фичи — couple-scoped, не мигрируем сейчас)
 
 ### Kanban (✅ МИГРИРОВАНО, milestone Kanban)
-- `boards`(couple_id, name, position), `board_columns`(couple_id, board_id, title, position), `cards`(couple_id, board_column_id, title, description, **assignee enum** him/her/together, due_at, done, completed_at, position), `labels`(couple_id, name, color), `card_label`(couple_id, card_id, label_id, unique). Все couple-scoped (CASCADE). `card_comments` — отложено. Real-time через Reverb `couple.{id}`.
+- `boards`(couple_id, name, position), `board_columns`(couple_id, board_id, title, position, **is_terminal** _(терминальная «Готово»-колонка; ровно одна на доску — partial unique index `board_columns_one_terminal_per_board`; удалять нельзя → 422)_), `cards`(couple_id, board_column_id, title, description, **assignee enum** him/her/together, due_at, **due_end_at** _(конец диапазона дедлайна; null = одиночная дата, due_at = начало/single)_, **done/completed_at** _(выводятся из попадания карточки в терминальную колонку: перенос в «Готово» закрывает задачу + событие `task_completed` идемпотентно по `card_done_<id>`, вынос обратно — возвращает в работу без отрицательных начислений; отдельной галочки нет)_, position), `labels`(couple_id, name, color), `card_label`(couple_id, card_id, label_id, unique). Все couple-scoped (CASCADE). `card_comments` — отложено. Real-time через Reverb `couple.{id}`.
 
 ### Wishlists (milestone Wishlists)
 - `wishlists`(couple_id), `wishlist_items`(wishlist_id, title, url, price), `item_reservations`(item_id, reserved_by_user_id) — «скрытая бронь»: видна резервирующему, скрыта от партнёра.

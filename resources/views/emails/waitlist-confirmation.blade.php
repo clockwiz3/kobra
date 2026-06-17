@@ -2,7 +2,7 @@
 <html lang="ru">
 <body style="margin:0;background:#0F0F17;color:#F4F1F7;font-family:Inter,Arial,sans-serif;padding:32px">
     <div style="max-width:440px;margin:0 auto;background:#171722;border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:28px">
-        <div style="font-size:20px;font-weight:700">♥ Cuploid</div>
+        <div style="font-size:20px;font-weight:700">♥ Kobra</div>
         <h1 style="font-size:22px;margin:18px 0 8px">Подтвердите подписку</h1>
         <p style="color:#A39FB3;line-height:1.6;margin:0 0 22px">
             Спасибо, что хотите быть в числе первых! Нажмите кнопку, чтобы занять место в вайтлисте.

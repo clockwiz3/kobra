@@ -40,7 +40,9 @@
 
 ## Компоненты (классы в themes.css)
 
-`.btn` (`.btn-primary/secondary/ghost`, `.btn-sm`), `.field`+`.input`/`.textarea`/`.select`, `.switch`, `.seg` (segmented), `.card`, `.badge` (`.ok/.warn/.err`), `.chip` (`.solid`), `.toast`, `.couple`+`.av` (аватары пары), `.goal`+`.bar`/`.hearts` (прогресс целей), `.task` (карточка задачи), `.hero`, `.topbar`+`.theme-switch`, `.swatch`/`.palette`.
+`.btn` (`.btn-primary/secondary/ghost`, `.btn-sm`), `.field`+`.input`/`.textarea`/`.select`, `.switch`, `.seg` (segmented), `.card`, `.badge` (`.ok/.warn/.err`), `.chip` (`.solid`/`.warn` — единая геометрия во всех темах, различаются только цветом/фоном), `.toast`, `.couple`+`.av` (аватары пары), `.goal`+`.bar`/`.hearts` (прогресс целей), `.task` (карточка задачи), `.hero`, `.topbar`+`.theme-switch`, `.swatch`/`.palette`.
+
+**Overlay-слой и контролы выбора:** `.overlay`+`.modal` (диалоги), `.checkbox`, `.radio`, `.choice-list`/`.choice` (выбираемые карточки), утилита `.sr-only`. Vue-компоненты поверх этих классов — `BaseModal`, `BaseCheckbox`, `BaseRadioGroup`/`BaseRadio`, `ConfirmDialog` + императивный `useConfirm()` — описаны в [ui-library.md](ui-library.md).
 
 ## Подключение (в index.html при scaffolding, задача #1)
 

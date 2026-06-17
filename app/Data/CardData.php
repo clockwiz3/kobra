@@ -13,7 +13,8 @@ class CardData extends Data
         public string $title,
         public ?string $description,
         public string $assignee, // him|her|together
-        public ?string $dueAt,
+        public ?string $dueAt,    // ISO 8601 — одиночная дата либо начало диапазона
+        public ?string $dueEndAt, // ISO 8601 — конец диапазона (null = одиночная дата)
         public bool $done,
         public int $position,
     ) {
@@ -28,6 +29,7 @@ class CardData extends Data
             description: $card->description,
             assignee: $card->assignee->value,
             dueAt: $card->due_at?->toIso8601String(),
+            dueEndAt: $card->due_end_at?->toIso8601String(),
             done: $card->done,
             position: $card->position,
         );

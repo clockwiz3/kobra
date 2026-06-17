@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /**
- * Кнопка дизайн-системы Cuploid. Классы из resources/css/themes.css (.btn / .btn-*).
+ * Кнопка дизайн-системы Kobra. Классы из resources/css/themes.css (.btn / .btn-*).
  * Темо- и гаммо-зависима автоматически через CSS-переменные.
  */
 withDefaults(

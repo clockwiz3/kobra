@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import type { Card, CardAssignee, Column } from '@/types/board'
+import type { Card, CardAssignee, CardPatch, Column } from '@/types/board'
 import { boardApi, type ApiBoard, type ApiCard, type ApiColumn } from '@/api/board'
 import { useLogger } from '@/composables/useLogger'
 
@@ -11,27 +11,36 @@ const uid = (prefix: string): string => `${prefix}_${(seq += 1)}_${Math.round(pe
 
 function mockColumns(): Column[] {
   return [
-    { id: 'col-ideas', title: 'Идеи', cards: [{ id: 'card-sea', title: 'Поездка к морю', assignee: 'together', labels: [], dueAt: null, done: false }] },
-    { id: 'col-week', title: 'На неделе', cards: [
+    { id: 'col-ideas', title: 'Идеи', isTerminal: false, cards: [{ id: 'card-sea', title: 'Поездка к морю', assignee: 'together', labels: [], dueAt: null, done: false }] },
+    { id: 'col-week', title: 'На неделе', isTerminal: false, cards: [
       { id: 'card-table', title: 'Забронировать столик', assignee: 'her', labels: [], dueAt: null, done: false },
       { id: 'card-flowers', title: 'Купить цветы', assignee: 'him', labels: [], dueAt: null, done: false },
     ] },
-    { id: 'col-dates', title: 'Свидания', cards: [{ id: 'card-dinner', title: 'Ужин при свечах', assignee: 'together', labels: [], dueAt: null, done: false }] },
-    { id: 'col-done', title: 'Готово', cards: [{ id: 'card-movie', title: 'Выбрать фильм на вечер', assignee: 'together', labels: [], dueAt: null, done: true }] },
+    { id: 'col-dates', title: 'Свидания', isTerminal: false, cards: [{ id: 'card-dinner', title: 'Ужин при свечах', assignee: 'together', labels: [], dueAt: null, done: false }] },
+    { id: 'col-done', title: 'Готово', isTerminal: true, cards: [{ id: 'card-movie', title: 'Выбрать фильм на вечер', assignee: 'together', labels: [], dueAt: null, done: true }] },
   ]
 }
 
 function toCard(api: ApiCard): Card {
-  return { id: String(api.id), title: api.title, description: api.description ?? undefined, assignee: api.assignee, labels: [], dueAt: api.dueAt, done: api.done }
+  return { id: String(api.id), title: api.title, description: api.description ?? undefined, assignee: api.assignee, labels: [], dueAt: api.dueAt, dueEndAt: api.dueEndAt, done: api.done }
 }
 function toColumn(api: ApiColumn): Column {
-  return { id: String(api.id), title: api.title, cards: api.cards.map(toCard) }
+  return { id: String(api.id), title: api.title, isTerminal: api.isTerminal, cards: api.cards.map(toCard) }
 }
 
 export const useBoardStore = defineStore('board', () => {
   const columns = ref<Column[]>(mockColumns())
   const boardId = ref<number | null>(null)
   const backed = ref(false) // true = данные из API; false = мок (нет авторизованной пары)
+  // первичная загрузка доски: true до первого ответа fetchBoard. Пока true — Board.vue
+  // показывает скелетон вместо мок-карточек (иначе на долю секунды мигает мок-доска).
+  // Сбрасывается один раз и навсегда → при возврате на доску повторный fetch идёт тихо.
+  const loading = ref(true)
+  // активный drag (карточка/колонка) — пока true, списки карточек клиппят overflow,
+  // чтобы FLIP-анимация vuedraggable не порождала мигающие скроллбары в принимающей колонке
+  const dragging = ref(false)
+  // id карточки, открытой в выезжающей панели параметров (null — панель закрыта)
+  const selectedCardId = ref<string | null>(null)
 
   const totalCards = computed(() => columns.value.reduce((s, c) => s + c.cards.length, 0))
 
@@ -43,17 +52,36 @@ export const useBoardStore = defineStore('board', () => {
     return null
   }
 
+  /** Карточка, открытая в панели (резолвится из текущего состояния доски). */
+  const selectedCard = computed<Card | null>(() =>
+    selectedCardId.value === null ? null : (findCard(selectedCardId.value)?.card ?? null),
+  )
+
+  function openCard(cardId: string): void {
+    selectedCardId.value = cardId
+    log.debug('openCard', { cardId })
+  }
+
+  function closeCard(): void {
+    log.debug('closeCard', { cardId: selectedCardId.value })
+    selectedCardId.value = null
+  }
+
   /** Загрузить доску с API; при 401/403 — остаёмся в мок-режиме. */
   async function fetchBoard(): Promise<void> {
-    const board: ApiBoard | null = await boardApi.fetchBoard()
-    if (board) {
-      columns.value = board.columns.map(toColumn)
-      boardId.value = board.id
-      backed.value = true
-      log.info('loaded from API', { boardId: board.id })
-    } else {
-      backed.value = false
-      log.debug('not authenticated — mock mode')
+    try {
+      const board: ApiBoard | null = await boardApi.fetchBoard()
+      if (board) {
+        columns.value = board.columns.map(toColumn)
+        boardId.value = board.id
+        backed.value = true
+        log.info('loaded from API', { boardId: board.id })
+      } else {
+        backed.value = false
+        log.debug('not authenticated — mock mode')
+      }
+    } finally {
+      loading.value = false // [FIX] первичная загрузка завершена — скрыть скелетон (реальная доска или мок-фолбэк)
     }
   }
 
@@ -81,10 +109,31 @@ export const useBoardStore = defineStore('board', () => {
     log.debug('toggleDone', { cardId, done: found.card.done })
   }
 
+  /**
+   * Обновить параметры карточки оптимистично; при провале PATCH — откат к снапшоту.
+   * В мок-режиме (backed=false) — только локальная мутация. Дебаунс живёт в drawer-компоненте.
+   */
+  async function updateCard(cardId: string, patch: CardPatch): Promise<void> {
+    const found = findCard(cardId)
+    if (!found) return
+    const { card } = found
+    const snapshot = { ...card } // для отката
+    Object.assign(card, patch) // оптимистично
+    log.debug('updateCard', { cardId, keys: Object.keys(patch) })
+    if (backed.value) {
+      const api = await boardApi.updateCard(Number(cardId), patch)
+      if (!api) {
+        Object.assign(card, snapshot)
+        log.warn('updateCard rollback', { cardId })
+      }
+    }
+  }
+
   async function removeCard(cardId: string): Promise<void> {
     const found = findCard(cardId)
     if (!found) return
     found.column.cards = found.column.cards.filter((c) => c.id !== cardId)
+    if (selectedCardId.value === cardId) selectedCardId.value = null // закрыть панель удалённой карточки
     if (backed.value) await boardApi.removeCard(Number(cardId))
   }
 
@@ -103,7 +152,7 @@ export const useBoardStore = defineStore('board', () => {
       if (api) columns.value.push(toColumn(api))
       else await fetchBoard()
     } else {
-      columns.value.push({ id: uid('col'), title: title.trim(), cards: [] })
+      columns.value.push({ id: uid('col'), title: title.trim(), isTerminal: false, cards: [] })
     }
     log.debug('addColumn')
   }
@@ -115,9 +164,33 @@ export const useBoardStore = defineStore('board', () => {
     if (backed.value) await boardApi.renameColumn(Number(columnId), title.trim())
   }
 
-  async function removeColumn(columnId: string): Promise<void> {
+  /**
+   * Удалить колонку. По умолчанию каскадом (карточки удаляются вместе с колонкой).
+   * При keepCards=true и наличии соседней колонки карточки переносятся в неё
+   * (relocate через moveCard), а удаляется уже пустая колонка — полноценный архив
+   * (soft-delete) появится отдельно (веха Privacy & Lifecycle Hardening).
+   */
+  async function removeColumn(columnId: string, opts: { keepCards?: boolean } = {}): Promise<void> {
+    const idx = columns.value.findIndex((c) => c.id === columnId)
+    if (idx === -1) return
+    const column = columns.value[idx]
+    // соседняя колонка-приёмник: предпочитаем предыдущую, иначе следующую
+    const sibling = columns.value[idx - 1] ?? columns.value[idx + 1] ?? null
+    let movedCount = 0
+
+    if (opts.keepCards && sibling && column.cards.length > 0) {
+      for (const card of [...column.cards]) {
+        const toIndex = sibling.cards.length
+        sibling.cards.push(card) // локальный перенос (append в конец соседней)
+        if (backed.value) await boardApi.moveCard(Number(card.id), Number(sibling.id), toIndex)
+        movedCount += 1
+      }
+      column.cards = []
+    }
+
     columns.value = columns.value.filter((c) => c.id !== columnId)
     if (backed.value) await boardApi.removeColumn(Number(columnId))
+    log.debug('removeColumn', { columnId, keepCards: !!opts.keepCards, movedCount })
   }
 
   /** Персист порядка колонок (локально DnD уже переставил). */
@@ -128,8 +201,9 @@ export const useBoardStore = defineStore('board', () => {
   }
 
   return {
-    columns, boardId, backed, totalCards, findCard,
-    fetchBoard, addCard, toggleDone, removeCard, persistCardMove,
+    columns, boardId, backed, loading, dragging, totalCards, findCard,
+    selectedCardId, selectedCard, openCard, closeCard,
+    fetchBoard, addCard, toggleDone, updateCard, removeCard, persistCardMove,
     addColumn, renameColumn, removeColumn, persistColumnReorder,
   }
 })

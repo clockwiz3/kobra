@@ -16,7 +16,7 @@ class BoardColumn extends Model
 
     protected function casts(): array
     {
-        return ['position' => 'integer'];
+        return ['position' => 'integer', 'is_terminal' => 'boolean'];
     }
 
     public function board(): BelongsTo

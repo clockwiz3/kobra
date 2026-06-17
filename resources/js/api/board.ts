@@ -1,7 +1,10 @@
 // Typed-клиент couple-API канбана. Bearer-токен из localStorage (до появления полноценного auth).
 // При 401/403 функции возвращают null/false — store остаётся в мок-режиме.
 
-import type { CardAssignee } from '@/types/board'
+import type { CardAssignee, CardPatch } from '@/types/board'
+import { useLogger } from '@/composables/useLogger'
+
+const log = useLogger('boardApi')
 
 export interface ApiCard {
   id: number
@@ -10,14 +13,27 @@ export interface ApiCard {
   description: string | null
   assignee: CardAssignee
   dueAt: string | null
+  dueEndAt: string | null
   done: boolean
   position: number
+}
+
+/** camelCase-патч → snake_case payload; включаем только реально переданные ключи. */
+function toSnakePatch(patch: CardPatch): Record<string, unknown> {
+  const body: Record<string, unknown> = {}
+  if ('title' in patch) body.title = patch.title
+  if ('description' in patch) body.description = patch.description
+  if ('assignee' in patch) body.assignee = patch.assignee
+  if ('dueAt' in patch) body.due_at = patch.dueAt
+  if ('dueEndAt' in patch) body.due_end_at = patch.dueEndAt
+  return body
 }
 
 export interface ApiColumn {
   id: number
   title: string
   position: number
+  isTerminal: boolean
   cards: ApiCard[]
 }
 
@@ -58,8 +74,10 @@ export const boardApi = {
   async createCard(columnId: number, title: string, assignee: CardAssignee): Promise<ApiCard | null> {
     return jsonOrNull<ApiCard>(await call('POST', '/cards', { column_id: columnId, title, assignee }))
   },
-  async updateCard(cardId: number, attrs: Partial<{ title: string; description: string | null; assignee: CardAssignee }>): Promise<ApiCard | null> {
-    return jsonOrNull<ApiCard>(await call('PATCH', `/cards/${cardId}`, attrs))
+  async updateCard(cardId: number, patch: CardPatch): Promise<ApiCard | null> {
+    const res = await call('PATCH', `/cards/${cardId}`, toSnakePatch(patch))
+    if (!res.ok) log.warn('[boardApi.updateCard] failed', { cardId, status: res.status })
+    return jsonOrNull<ApiCard>(res)
   },
   async toggleDone(cardId: number): Promise<ApiCard | null> {
     return jsonOrNull<ApiCard>(await call('PATCH', `/cards/${cardId}/toggle-done`))

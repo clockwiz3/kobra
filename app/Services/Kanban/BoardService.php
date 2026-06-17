@@ -20,10 +20,15 @@ class BoardService
         }
 
         $board = Board::create(['name' => 'Наша доска', 'position' => 0]);
+        $terminalId = null;
         foreach (['Идеи', 'На неделе', 'Свидания', 'Готово'] as $i => $title) {
-            BoardColumn::create(['board_id' => $board->id, 'title' => $title, 'position' => $i]);
+            $isTerminal = $title === 'Готово'; // «Готово» — терминальная колонка (роль галочки «выполнено»)
+            $column = BoardColumn::create(['board_id' => $board->id, 'title' => $title, 'position' => $i, 'is_terminal' => $isTerminal]);
+            if ($isTerminal) {
+                $terminalId = $column->id;
+            }
         }
-        Log::info('[BoardService.ensureDefaultBoard] created', ['board_id' => $board->id]);
+        Log::info('[BoardService.ensureDefaultBoard] created', ['board_id' => $board->id, 'terminal_column_id' => $terminalId]);
 
         return $board;
     }
@@ -57,6 +62,12 @@ class BoardService
 
     public function removeColumn(BoardColumn $column): void
     {
+        // Терминальную колонку («Готово») удалять нельзя — она выполняет роль галочки «выполнено».
+        if ($column->is_terminal) {
+            Log::warning('[BoardService.removeColumn] blocked terminal', ['column_id' => $column->id]);
+            abort(422, 'Колонку «Готово» нельзя удалить.');
+        }
+
         $column->delete(); // карточки удалятся каскадом (board_column_id FK CASCADE)
         Log::info('[BoardService.removeColumn]', ['column_id' => $column->id]);
     }

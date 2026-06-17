@@ -1,45 +1,65 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { Card } from '@/types/board'
+import { useBoardStore } from '@/stores/board'
+import { BaseChip } from '@/components/ui'
+import { formatRange } from '@/lib/date'
 import { useLogger } from '@/composables/useLogger'
 
 const props = defineProps<{ card: Card }>()
-const emit = defineEmits<{ 'toggle-done': []; remove: [] }>()
+const emit = defineEmits<{ remove: []; open: [] }>()
+const store = useBoardStore()
 const log = useLogger('KanbanCard')
 
 const assigneeLabel = computed(() => {
   return { him: 'Он', her: 'Она', together: '♥ Вместе' }[props.card.assignee]
 })
 
-function toggle() {
-  log.debug('toggle-done', { id: props.card.id })
-  emit('toggle-done')
+// дедлайн: одиночная дата или диапазон (ru), пусто — если не задан
+const dueLabel = computed(() => formatRange(props.card.dueAt, props.card.dueEndAt))
+
+// Открытие панели по клику на тело карточки. Отличаем клик от drag: vuedraggable
+// инициирует перетаскивание с того же тела, поэтому игнорируем, если был сдвиг
+// указателя или активен drag (store.dragging).
+let downX = 0
+let downY = 0
+let moved = false
+function onPointerdown(e: PointerEvent) {
+  downX = e.clientX
+  downY = e.clientY
+  moved = false
+}
+function onPointermove(e: PointerEvent) {
+  if (Math.abs(e.clientX - downX) > 5 || Math.abs(e.clientY - downY) > 5) moved = true
+}
+function openCard() {
+  if (moved || store.dragging) return
+  log.debug('open', { id: props.card.id })
+  emit('open')
 }
 </script>
 
 <template>
+  <!-- Завершение задачи теперь — перенос в терминальную колонку «Готово» (не галочка).
+       .done остаётся как визуальная подсветка закрытых карточек (зачёркивание/прозрачность). -->
   <div class="task" :class="{ done: card.done }">
     <div
-      class="check"
-      role="checkbox"
-      :aria-checked="card.done"
+      class="task__body"
+      role="button"
       tabindex="0"
-      @click="toggle"
-      @keydown.enter.space.prevent="toggle"
+      :aria-label="`Открыть карточку: ${card.title}`"
+      style="flex: 1; min-width: 0"
+      @pointerdown="onPointerdown"
+      @pointermove="onPointermove"
+      @click="openCard"
+      @keydown.enter.space.prevent="openCard"
     >
-      <svg v-if="card.done" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M20 6L9 17l-5-5" />
-      </svg>
-    </div>
-
-    <div style="flex: 1; min-width: 0">
       <div class="tt">{{ card.title }}</div>
+      <!-- Все чипы — единая геометрия (.chip), различаются только содержимым и цветом/фоном (tone). -->
       <div class="tm">
-        <span class="chip" :class="{ solid: card.assignee === 'together' }" style="padding: 3px 9px; font-size: 11px">
-          {{ assigneeLabel }}
-        </span>
-        <span v-for="l in card.labels" :key="l" class="chip" style="padding: 2px 8px; font-size: 11px">{{ l }}</span>
-        <span v-if="card.dueAt" class="badge warn" style="padding: 2px 7px">{{ card.dueAt }}</span>
+        <BaseChip :tone="card.assignee === 'together' ? 'accent' : 'neutral'">{{ assigneeLabel }}</BaseChip>
+        <BaseChip v-for="l in card.labels" :key="l" tone="neutral">{{ l }}</BaseChip>
+        <BaseChip v-if="dueLabel" tone="warn">{{ dueLabel }}</BaseChip>
       </div>
     </div>
   </div>

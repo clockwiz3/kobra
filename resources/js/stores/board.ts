@@ -98,17 +98,6 @@ export const useBoardStore = defineStore('board', () => {
     log.debug('addCard', { columnId })
   }
 
-  async function toggleDone(cardId: string): Promise<void> {
-    const found = findCard(cardId)
-    if (!found) return
-    found.card.done = !found.card.done // оптимистично
-    if (backed.value) {
-      const ok = await boardApi.toggleDone(Number(cardId))
-      if (!ok) { found.card.done = !found.card.done; log.warn('toggleDone rollback', { cardId }) }
-    }
-    log.debug('toggleDone', { cardId, done: found.card.done })
-  }
-
   /**
    * Обновить параметры карточки оптимистично; при провале PATCH — откат к снапшоту.
    * В мок-режиме (backed=false) — только локальная мутация. Дебаунс живёт в drawer-компоненте.
@@ -137,12 +126,21 @@ export const useBoardStore = defineStore('board', () => {
     if (backed.value) await boardApi.removeCard(Number(cardId))
   }
 
-  /** Персист перемещения карточки (локально DnD уже подвинул). */
+  /**
+   * Персист перемещения карточки (локально DnD уже подвинул). Готовность выводится из
+   * терминальности целевой колонки (роль галочки): в «Готово» → done=true, обратно → false.
+   * Делается и в мок-режиме; в backed бэкенд — источник правды (сверяем done из ответа).
+   */
   async function persistCardMove(cardId: string, toColumnId: string, toIndex: number): Promise<void> {
-    if (!backed.value) return
-    const ok = await boardApi.moveCard(Number(cardId), Number(toColumnId), toIndex)
-    if (!ok) await fetchBoard()
-    log.debug('persistCardMove', { cardId, toColumnId, toIndex })
+    const found = findCard(cardId)
+    const target = columns.value.find((c) => c.id === toColumnId)
+    if (found && target) found.card.done = target.isTerminal // оптимистично, в т.ч. мок
+    if (backed.value) {
+      const api = await boardApi.moveCard(Number(cardId), Number(toColumnId), toIndex)
+      if (!api) await fetchBoard()
+      else if (found) found.card.done = api.done // бэкенд — источник правды
+    }
+    log.debug('persistCardMove', { cardId, toColumnId, toIndex, done: found?.card.done })
   }
 
   async function addColumn(title: string): Promise<void> {
@@ -203,7 +201,7 @@ export const useBoardStore = defineStore('board', () => {
   return {
     columns, boardId, backed, loading, dragging, totalCards, findCard,
     selectedCardId, selectedCard, openCard, closeCard,
-    fetchBoard, addCard, toggleDone, updateCard, removeCard, persistCardMove,
+    fetchBoard, addCard, updateCard, removeCard, persistCardMove,
     addColumn, renameColumn, removeColumn, persistColumnReorder,
   }
 })

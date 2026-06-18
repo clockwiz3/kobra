@@ -278,6 +278,28 @@ section.block { padding: 72px 0; border-top: 1px solid var(--border); }
 [data-theme="pixel"] .seg button { font-family: var(--font-pill); font-size: 10px; text-transform: uppercase; }
 [data-theme="pixel"] .seg button[aria-selected="true"] { background: var(--accent); }
 
+/* ── Кастомный селект (BaseSelect). Триггер = .btn .btn-secondary .btn-sm (одна линия с кнопками);
+   ниже — только выпадающее меню и шеврон. Темизируется во всех 3 темах. ── */
+.ctl-select { position: relative; display: inline-flex; }
+.ctl-select__chev { flex: none; color: var(--text-muted); transition: transform .18s var(--ease, ease); }
+.ctl-select--open .ctl-select__chev { transform: rotate(180deg); }
+.ctl-select__menu {
+  position: absolute; top: calc(100% + 6px); left: 0; min-width: 100%; z-index: 50;
+  margin: 0; padding: 6px; list-style: none;
+  background: var(--surface); border: 1px solid var(--border-strong); border-radius: var(--r-md);
+  box-shadow: var(--shadow); display: flex; flex-direction: column; gap: 2px;
+}
+.ctl-select__option {
+  font-family: var(--font-body); font-size: 13px; font-weight: 500; color: var(--text);
+  padding: 8px 14px; border-radius: var(--r-sm); cursor: pointer; white-space: nowrap;
+  transition: background .12s, color .12s;
+}
+.ctl-select__option.is-active { background: var(--surface-2); }
+.ctl-select__option.is-selected { background: var(--grad); color: var(--accent-ink); }
+[data-theme="pixel"] .ctl-select__menu { border-width: 3px; }
+[data-theme="pixel"] .ctl-select__option { font-family: var(--font-pill); font-size: 10px; text-transform: uppercase; }
+[data-theme="pixel"] .ctl-select__option.is-selected { background: var(--accent); }
+
 /* ============================================================
    CARDS / BADGES / CHIPS
    ============================================================ */

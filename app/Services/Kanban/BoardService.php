@@ -33,14 +33,27 @@ class BoardService
         return $board;
     }
 
+    /**
+     * Добавить колонку. Новая колонка встаёт ПЕРЕД терминальной («Готово»), а терминальная
+     * сдвигается на одну позицию вниз — инвариант «Готово всегда последняя» сохраняется.
+     */
     public function addColumn(Board $board, string $title): BoardColumn
     {
+        $terminal = $board->columns()->where('is_terminal', true)->first();
+        if ($terminal !== null) {
+            $position = $terminal->position;
+            $terminal->update(['position' => $position + 1]); // «Готово» снова последняя
+        } else {
+            $position = $board->columns()->count();
+        }
+
         $column = BoardColumn::create([
             'board_id' => $board->id,
             'title' => $title,
-            'position' => $board->columns()->count(),
+            'position' => $position,
+            'is_terminal' => false,
         ]);
-        Log::info('[BoardService.addColumn]', ['board_id' => $board->id, 'column_id' => $column->id]);
+        Log::info('[BoardService.addColumn]', ['board_id' => $board->id, 'column_id' => $column->id, 'position' => $position]);
 
         return $column;
     }
@@ -51,13 +64,24 @@ class BoardService
         Log::debug('[BoardService.renameColumn]', ['column_id' => $column->id]);
     }
 
-    /** @param array<int,int> $orderedIds */
+    /**
+     * Переупорядочить колонки. Бэкстоп инварианта «Готово всегда последняя»: терминальную
+     * колонку принудительно выносим в конец независимо от присланного фронтом порядка.
+     *
+     * @param  array<int,int>  $orderedIds
+     */
     public function reorderColumns(array $orderedIds): void
     {
+        $terminalId = BoardColumn::where('is_terminal', true)->value('id');
+        if ($terminalId !== null) {
+            $orderedIds = array_values(array_filter($orderedIds, fn ($id) => (int) $id !== (int) $terminalId));
+            $orderedIds[] = (int) $terminalId; // терминальная — всегда последняя
+        }
+
         foreach ($orderedIds as $i => $id) {
             BoardColumn::whereKey($id)->update(['position' => $i]); // scoped: только колонки текущей пары
         }
-        Log::debug('[BoardService.reorderColumns]', ['count' => count($orderedIds)]);
+        Log::debug('[BoardService.reorderColumns]', ['count' => count($orderedIds), 'terminal_pinned' => $terminalId !== null]);
     }
 
     public function removeColumn(BoardColumn $column): void

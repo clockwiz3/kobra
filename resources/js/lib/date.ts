@@ -162,5 +162,15 @@ export function isRangeValid(start: string | null | undefined, end: string | nul
   return s.isSameOrBefore(e, 'day')
 }
 
+/**
+ * Дедлайн просрочен: эффективная дата (end ?? start) строго раньше сегодня (по дню).
+ * Пустой дедлайн → false. Используется фильтром доски «просроченные».
+ */
+export function isOverdue(start: string | null | undefined, end?: string | null | undefined): boolean {
+  const eff = parseISO(end ?? null) ?? parseISO(start ?? null)
+  if (!eff) return false
+  return eff.isBefore(today(), 'day')
+}
+
 export { dayjs }
 export type { Dayjs }

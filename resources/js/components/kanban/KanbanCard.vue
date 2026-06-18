@@ -3,7 +3,7 @@ import { computed } from 'vue'
 import type { Card } from '@/types/board'
 import { useBoardStore } from '@/stores/board'
 import { BaseChip } from '@/components/ui'
-import { formatRange } from '@/lib/date'
+import { formatRange, isOverdue } from '@/lib/date'
 import { useLogger } from '@/composables/useLogger'
 
 // Завершение задачи теперь — перенос в терминальную колонку «Готово» (не галочка).
@@ -29,6 +29,11 @@ const assigneeLabel = computed(() => {
 // дедлайн: одиночная дата или диапазон (ru), пусто — если не задан
 const dueLabel = computed(() => formatRange(props.card.dueAt, props.card.dueEndAt))
 
+// data-атрибуты для CSS-фильтра доски (читают только card — это внутренний рендер KanbanCard,
+// vnode айтема vuedraggable не трогаем). overdue согласован со стором (cardMatchesFilter).
+const hasDue = computed(() => props.card.dueAt != null)
+const overdue = computed(() => props.card.dueAt != null && !props.card.done && isOverdue(props.card.dueAt, props.card.dueEndAt))
+
 // Открытие панели по клику на тело карточки. Отличаем клик от drag: vuedraggable
 // инициирует перетаскивание с того же тела, поэтому игнорируем, если был сдвиг
 // указателя или активен drag (store.dragging).
@@ -51,7 +56,13 @@ function openCard() {
 </script>
 
 <template>
-  <div class="task" :class="{ done: card.done, 'just-closed': isJustClosed }">
+  <div
+    class="task"
+    :class="{ done: card.done, 'just-closed': isJustClosed }"
+    :data-assignee="card.assignee"
+    :data-has-due="hasDue || null"
+    :data-overdue="overdue || null"
+  >
     <div
       class="task__body"
       role="button"

@@ -150,11 +150,15 @@ function onDragEnd() {
   flex: none;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  /* без column-gap: иначе между sticky-шапкой и карточками прозрачный зазор, в котором при
+     скролле «висит» обрезанная карточка. Отступы задаём паддингом шапки и margin формы добавления. */
+  gap: 0;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--r-lg);
-  padding: 14px;
+  /* верхний padding ушёл в sticky-шапку: иначе при скролле шапка сперва «дёргается» вверх
+     (проезжает эти 14px), прежде чем прилипнуть. */
+  padding: 0 14px 14px;
   /* высоту задаёт align-items:stretch у .board-row (все колонки = самой высокой).
      Внутренних скроллов НЕТ — весь канбан листается одним скроллом .board-viewport. */
 }
@@ -164,7 +168,12 @@ function onDragEnd() {
   display: flex; align-items: center; gap: 8px;
   position: sticky; top: 0; z-index: 2;
   background: var(--surface);
-  padding-bottom: 10px;
+  /* банд во всю ширину колонки (компенсируем боковой padding) со скруглением сверху как у
+     колонки: прилипает сразу (без рывка) и сохраняет border-radius верхних углов при скролле. */
+  margin: 0 -14px;
+  /* нижний padding = отступ до карточек И зона перекрытия: карточки уезжают ровно под банд */
+  padding: 14px 14px 12px;
+  border-radius: var(--r-lg) var(--r-lg) 0 0;
 }
 /* кнопка удаления в «Готово»: скрыта, но занимает место (выравнивание счётчика/шапки) */
 .kanban-col__del.is-invisible { visibility: hidden; pointer-events: none; }
@@ -173,6 +182,7 @@ function onDragEnd() {
    (и терминальная «Готово» без формы добавления не короче остальных). Без overflow:
    колонка растёт по контенту, скроллит весь канбан целиком (.board-viewport). */
 .kanban-col__cards { flex: 1; display: flex; flex-direction: column; gap: 10px; min-height: 24px; }
+.kanban-col__add { margin-top: 12px; } /* отступ от карточек (column-gap убран) */
 .kanban-col__add .input { font-size: 14px; }
 </style>
 

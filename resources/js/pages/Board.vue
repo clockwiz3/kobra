@@ -5,8 +5,10 @@ import draggable from 'vuedraggable'
 import ThemeSwitch from '@/components/ui/ThemeSwitch.vue'
 import BaseButton from '@/components/ui/BaseButton.vue'
 import BrandMark from '@/components/ui/BrandMark.vue'
+import { BaseModal, BaseField, BaseSelect } from '@/components/ui'
 import KanbanColumn from '@/components/kanban/KanbanColumn.vue'
 import { CardDetailDrawer } from '@/components/composite'
+import type { Column } from '@/types/board'
 import { useBoardStore } from '@/stores/board'
 import { useAuthStore } from '@/stores/auth'
 import { useLogger } from '@/composables/useLogger'
@@ -17,7 +19,25 @@ const auth = useAuthStore()
 const router = useRouter()
 const log = useLogger('Board')
 const reduced = prefersReducedMotion()
+
 const newColumn = ref('')
+const showAddColumn = ref(false)
+
+// Опции фильтров доски (значения совпадают со стором: filterAssignee / filterDeadline)
+const assigneeOptions = [
+  { value: 'all', label: 'Кто угодно' },
+  { value: 'him', label: 'Он' },
+  { value: 'her', label: 'Она' },
+  { value: 'together', label: '♥ Вместе' },
+]
+const deadlineOptions = [
+  { value: 'all', label: 'Дедлайн: любой' },
+  { value: 'has', label: 'С дедлайном' },
+  { value: 'none', label: 'Без дедлайна' },
+  { value: 'overdue', label: 'Просроченные' },
+]
+function onAssigneeFilter(v: string) { store.filterAssignee = v as typeof store.filterAssignee }
+function onDeadlineFilter(v: string) { store.filterDeadline = v as typeof store.filterDeadline }
 
 // число карточек-плейсхолдеров на колонку скелетона (просто для естественного вида)
 const skeletonColumns = [2, 3, 1, 2]
@@ -28,16 +48,41 @@ async function logout() {
   router.replace({ name: 'login' })
 }
 
-function addColumn() {
-  if (newColumn.value.trim() === '') return
-  store.addColumn(newColumn.value)
+function openAddColumn() {
   newColumn.value = ''
+  showAddColumn.value = true
+}
+
+function submitAddColumn() {
+  const title = newColumn.value.trim()
+  if (title === '') return
+  store.addColumn(title) // вставится ПЕРЕД терминальной «Готово»
+  newColumn.value = ''
+  showAddColumn.value = false
   log.debug('add-column')
 }
 
 onMounted(() => store.fetchBoard())
 
+// «Готово» всегда последняя: нельзя двигать саму терминальную колонку и нельзя
+// вставать ПОСЛЕ неё (willInsertAfter). Возврат false отменяет drop в этих случаях.
+function onColumnMove(evt: {
+  draggedContext: { element: Column }
+  relatedContext: { element: Column | null }
+  willInsertAfter?: boolean
+}): boolean {
+  if (evt.draggedContext.element.isTerminal) return false
+  if (evt.relatedContext.element?.isTerminal && evt.willInsertAfter) return false
+  return true
+}
+
 function onColumnReorder() {
+  // бэкстоп к :move и серверу — держим терминальную последней и локально
+  const ti = store.columns.findIndex((c) => c.isTerminal)
+  if (ti !== -1 && ti !== store.columns.length - 1) {
+    const [term] = store.columns.splice(ti, 1)
+    store.columns.push(term)
+  }
   store.persistColumnReorder()
   log.debug('column-reorder')
 }
@@ -62,46 +107,80 @@ function onColumnDragEnd() {
     </div>
   </header>
 
-  <main class="board-main" :class="{ 'is-dragging': store.dragging }" :aria-busy="store.loading">
-    <div class="board-head wrap">
-      <h1 class="sec-title" style="font-size: 30px">Делишки</h1>
-    </div>
-
-    <!-- [FIX] скелетон на первичную загрузку: иначе на долю секунды мигают мок-карточки,
-         которыми инициализирован стор (graceful-фолбэк), до ответа fetchBoard -->
-    <div v-if="store.loading" class="board-scroll board-skeleton" aria-hidden="true">
-      <div v-for="(count, ci) in skeletonColumns" :key="ci" class="sk-col">
-        <div class="sk-bar sk-head"></div>
-        <div v-for="n in count" :key="n" class="sk-bar sk-card"></div>
+  <main
+    class="board-main"
+    :class="{ 'is-dragging': store.dragging }"
+    :aria-busy="store.loading"
+    :data-filter-assignee="store.filterAssignee"
+    :data-filter-deadline="store.filterDeadline"
+  >
+    <!-- «Делишки» слева, далее ряд контролов доски: добавить колонку + фильтры -->
+    <div class="board-head">
+      <h1 class="sec-title board-head__title">Делишки</h1>
+      <div class="board-head__controls">
+        <BaseButton variant="secondary" size="sm" @click="openAddColumn">+ колонка</BaseButton>
+        <BaseSelect
+          :model-value="store.filterAssignee"
+          :options="assigneeOptions"
+          aria-label="Фильтр по исполнителю"
+          @update:model-value="onAssigneeFilter"
+        />
+        <BaseSelect
+          :model-value="store.filterDeadline"
+          :options="deadlineOptions"
+          aria-label="Фильтр по дедлайну"
+          @update:model-value="onDeadlineFilter"
+        />
       </div>
     </div>
 
-    <draggable
-      v-else
-      :list="store.columns"
-      group="columns"
-      item-key="id"
-      handle=".kanban-col__title"
-      class="board-scroll ds-scroll"
-      ghost-class="kanban-ghost"
-      :animation="reduced ? 0 : 160"
-      @change="onColumnReorder"
-      @start="onColumnDragStart"
-      @end="onColumnDragEnd"
-    >
-      <template #item="{ element }">
-        <KanbanColumn :column="element" />
-      </template>
-      <template #footer>
-        <form class="board-addcol" @submit.prevent="addColumn">
-          <input v-model="newColumn" class="input" placeholder="+ колонка" />
-        </form>
-      </template>
-    </draggable>
+    <!-- Единственный скролл-контейнер всего канбана: вертикаль (классический скролл справа) +
+         горизонталь для колонок. Колонки внутри — по высоте контента, без внутренних скроллов,
+         поэтому вся лента листается синхронно одним скроллом. -->
+    <div class="board-viewport ds-scroll">
+      <!-- [FIX] скелетон на первичную загрузку: иначе на долю секунды мигают мок-карточки,
+           которыми инициализирован стор (graceful-фолбэк), до ответа fetchBoard -->
+      <div v-if="store.loading" class="board-row board-skeleton" aria-hidden="true">
+        <div v-for="(count, ci) in skeletonColumns" :key="ci" class="sk-col">
+          <div class="sk-bar sk-head"></div>
+          <div v-for="n in count" :key="n" class="sk-bar sk-card"></div>
+        </div>
+      </div>
+
+      <draggable
+        v-else
+        :list="store.columns"
+        group="columns"
+        item-key="id"
+        handle=".kanban-col__title"
+        class="board-row"
+        ghost-class="kanban-ghost"
+        :animation="reduced ? 0 : 160"
+        :move="onColumnMove"
+        @change="onColumnReorder"
+        @start="onColumnDragStart"
+        @end="onColumnDragEnd"
+      >
+        <template #item="{ element }">
+          <KanbanColumn :column="element" />
+        </template>
+      </draggable>
+    </div>
   </main>
 
   <!-- Выезжающая панель параметров карточки (самодостаточна: open берёт из стора) -->
   <CardDetailDrawer />
+
+  <!-- Добавление колонки через модалку. Колонка добавляется последней, но перед «Готово». -->
+  <BaseModal v-model="showAddColumn" title="Новая колонка" size="sm">
+    <form @submit.prevent="submitAddColumn">
+      <BaseField v-model="newColumn" label="Название колонки" placeholder="Например, На неделе" />
+    </form>
+    <template #footer="{ close }">
+      <BaseButton variant="ghost" size="sm" @click="close">Отмена</BaseButton>
+      <BaseButton variant="primary" size="sm" :disabled="newColumn.trim() === ''" @click="submitAddColumn">Добавить</BaseButton>
+    </template>
+  </BaseModal>
 </template>
 
 <style scoped>
@@ -111,25 +190,33 @@ function onColumnDragEnd() {
   display: flex;
   flex-direction: column;
 }
-.board-head { display: flex; align-items: baseline; gap: 14px; margin-bottom: 18px; }
-.board-scroll {
+/* «Делишки» слева (в одну линию с колонками — те же 32px паддинга, без .wrap-центрирования),
+   контролы — сразу после неё */
+.board-head { display: flex; align-items: center; gap: 16px; margin-bottom: 18px; padding: 0 32px; }
+.board-head__title { font-size: 30px; }
+.board-head__controls { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+/* Единственный скролл-контейнер всего канбана (вертикаль = классический скролл справа +
+   горизонталь для колонок). Внутри — ряд колонок по высоте контента. */
+.board-viewport {
   flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 0 32px 16px;
+}
+.board-row {
   display: flex;
   gap: 16px;
-  align-items: flex-start;
-  /* лента доски скроллится только по горизонтали; overflow-y явно hidden, иначе
-     при overflow-x:auto спека форсит overflow-y → auto и в drag мигает верт. скролл.
-     Колонки скроллятся внутри себя (.kanban-col__cards). */
-  overflow-x: auto;
-  overflow-y: hidden;
-  padding: 0 32px 16px;
-  min-height: 0;
+  /* колонки одной высоты «в одну линию»: тянутся по кросс-оси до самой высокой; */
+  align-items: stretch;
+  /* min-height:100% — когда контента мало, колонки заполняют высоту вьюпорта;
+     высота ряда = самая высокая колонка, поэтому весь канбан листается одним скроллом. */
+  min-height: 100%;
+  width: max-content;
+  min-width: 100%;
 }
-.board-scroll > * { max-height: 100%; }
-.board-addcol { flex: none; width: 240px; }
-.board-addcol .input { background: var(--surface-2); }
 @media (max-width: 860px) {
-  .board-scroll { padding: 0 16px 16px; scroll-snap-type: x mandatory; }
+  .board-head { padding: 0 16px; }
+  .board-viewport { padding: 0 16px 16px; }
 }
 
 /* ── Скелетон первичной загрузки доски ── */
@@ -144,7 +231,6 @@ function onColumnDragEnd() {
   border: 1px solid var(--border);
   border-radius: var(--r-lg);
   padding: 14px;
-  max-height: 100%;
 }
 .sk-bar {
   position: relative;

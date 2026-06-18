@@ -24,6 +24,7 @@
 // — Примитивы / общие контролы —
 export { default as BaseButton } from './BaseButton.vue'
 export { default as BaseField } from './BaseField.vue'
+export { default as BaseSelect } from './BaseSelect.vue'
 export { default as BaseCard } from './BaseCard.vue'
 export { default as BaseChip } from './BaseChip.vue'
 export { default as BaseBadge } from './BaseBadge.vue'

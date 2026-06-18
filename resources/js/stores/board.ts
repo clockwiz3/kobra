@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import type { Card, CardAssignee, CardPatch, Column } from '@/types/board'
 import { boardApi, type ApiBoard, type ApiCard, type ApiColumn } from '@/api/board'
+import { isOverdue } from '@/lib/date'
 import { useLogger } from '@/composables/useLogger'
 
 const log = useLogger('boardStore')
@@ -54,6 +55,23 @@ export const useBoardStore = defineStore('board', () => {
     justClosedCardId.value = cardId
     if (justClosedTimer !== null) clearTimeout(justClosedTimer)
     justClosedTimer = setTimeout(() => { justClosedCardId.value = null; justClosedTimer = null }, JUST_CLOSED_MS)
+  }
+
+  // Фильтры доски (клиентские, in-memory): по исполнителю и по дедлайну.
+  // Карточки, не прошедшие фильтр, скрываются (v-show в KanbanColumn), но остаются в
+  // :list драггабла — индексы DnD не плывут.
+  const filterAssignee = ref<'all' | CardAssignee>('all')
+  const filterDeadline = ref<'all' | 'has' | 'none' | 'overdue'>('all')
+
+  /** Проходит ли карточка текущие фильтры (исполнитель И дедлайн). */
+  function cardMatchesFilter(card: Card): boolean {
+    if (filterAssignee.value !== 'all' && card.assignee !== filterAssignee.value) return false
+    switch (filterDeadline.value) {
+      case 'has': return card.dueAt != null
+      case 'none': return card.dueAt == null
+      case 'overdue': return card.dueAt != null && !card.done && isOverdue(card.dueAt, card.dueEndAt)
+      default: return true
+    }
   }
 
   const totalCards = computed(() => columns.value.reduce((s, c) => s + c.cards.length, 0))
@@ -160,14 +178,21 @@ export const useBoardStore = defineStore('board', () => {
     log.debug('persistCardMove', { cardId, toColumnId, toIndex, done: found?.card.done })
   }
 
+  /** Вставить колонку ПЕРЕД терминальной («Готово» всегда последняя). */
+  function insertBeforeTerminal(col: Column): void {
+    const i = columns.value.findIndex((c) => c.isTerminal)
+    if (i === -1) columns.value.push(col)
+    else columns.value.splice(i, 0, col)
+  }
+
   async function addColumn(title: string): Promise<void> {
     if (title.trim() === '') return
     if (backed.value && boardId.value !== null) {
       const api = await boardApi.addColumn(boardId.value, title.trim())
-      if (api) columns.value.push(toColumn(api))
+      if (api) insertBeforeTerminal(toColumn(api))
       else await fetchBoard()
     } else {
-      columns.value.push({ id: uid('col'), title: title.trim(), isTerminal: false, cards: [] })
+      insertBeforeTerminal({ id: uid('col'), title: title.trim(), isTerminal: false, cards: [] })
     }
     log.debug('addColumn')
   }
@@ -219,6 +244,7 @@ export const useBoardStore = defineStore('board', () => {
     columns, boardId, backed, loading, dragging, totalCards, findCard,
     selectedCardId, selectedCard, openCard, closeCard,
     justClosedCardId,
+    filterAssignee, filterDeadline, cardMatchesFilter,
     fetchBoard, addCard, updateCard, removeCard, persistCardMove,
     addColumn, renameColumn, removeColumn, persistColumnReorder,
   }

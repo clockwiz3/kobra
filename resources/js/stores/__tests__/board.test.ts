@@ -58,3 +58,53 @@ describe('boardStore.persistCardMove — done через терминальну�
     expect(store.findCard('card-movie')?.card.done).toBe(false)
   })
 })
+
+// Фильтры доски: по исполнителю и по дедлайну (далёкие даты — без зависимости от часов).
+describe('boardStore.cardMatchesFilter', () => {
+  beforeEach(() => setActivePinia(createPinia()))
+  const mk = (over: Partial<Card> = {}): Card => ({ id: 'x', title: 't', assignee: 'together', labels: [], dueAt: null, dueEndAt: null, done: false, ...over })
+
+  it('фильтр по исполнителю', () => {
+    const store = useBoardStore()
+    store.filterAssignee = 'him'
+    expect(store.cardMatchesFilter(mk({ assignee: 'him' }))).toBe(true)
+    expect(store.cardMatchesFilter(mk({ assignee: 'her' }))).toBe(false)
+  })
+
+  it('фильтр по дедлайну: с дедлайном / без / просроченные', () => {
+    const store = useBoardStore()
+    store.filterDeadline = 'has'
+    expect(store.cardMatchesFilter(mk({ dueAt: '2999-01-01' }))).toBe(true)
+    expect(store.cardMatchesFilter(mk({ dueAt: null }))).toBe(false)
+
+    store.filterDeadline = 'none'
+    expect(store.cardMatchesFilter(mk({ dueAt: null }))).toBe(true)
+
+    store.filterDeadline = 'overdue'
+    expect(store.cardMatchesFilter(mk({ dueAt: '2000-01-01' }))).toBe(true)
+    expect(store.cardMatchesFilter(mk({ dueAt: '2999-01-01' }))).toBe(false)
+    expect(store.cardMatchesFilter(mk({ dueAt: '2000-01-01', done: true }))).toBe(false) // выполненная не «просрочена»
+  })
+
+  it('исполнитель И дедлайн комбинируются', () => {
+    const store = useBoardStore()
+    store.filterAssignee = 'her'
+    store.filterDeadline = 'has'
+    expect(store.cardMatchesFilter(mk({ assignee: 'her', dueAt: '2999-01-01' }))).toBe(true)
+    expect(store.cardMatchesFilter(mk({ assignee: 'her', dueAt: null }))).toBe(false)
+    expect(store.cardMatchesFilter(mk({ assignee: 'him', dueAt: '2999-01-01' }))).toBe(false)
+  })
+})
+
+// «Готово» всегда последняя: новая колонка встаёт перед терминальной.
+describe('boardStore.addColumn — вставка перед терминальной', () => {
+  beforeEach(() => setActivePinia(createPinia()))
+
+  it('новая колонка — предпоследняя, «Готово» остаётся последней', async () => {
+    const store = useBoardStore() // мок: …, col-done (isTerminal) последняя
+    await store.addColumn('Новая')
+    const cols = store.columns
+    expect(cols[cols.length - 1].isTerminal).toBe(true) // «Готово» последняя
+    expect(cols[cols.length - 2].title).toBe('Новая')   // новая — перед ней
+  })
+})

@@ -17,6 +17,9 @@ const reduced = prefersReducedMotion()
 // есть ли куда переносить карточки при удалении (нужна хотя бы одна соседняя колонка)
 const hasSiblings = computed(() => store.columns.length > 1)
 
+// число карточек, проходящих фильтр доски (бейдж показывает видимые, не все)
+const visibleCount = computed(() => props.column.cards.filter((c) => store.cardMatchesFilter(c)).length)
+
 const newTitle = ref('')
 const editing = ref(false)
 const editTitle = ref(props.column.title)
@@ -92,7 +95,7 @@ function onDragEnd() {
     <div class="kanban-col__head">
       <template v-if="!editing">
         <h3 class="sub-h kanban-col__title" style="margin: 0" @dblclick="startRename">{{ column.title }}</h3>
-        <span class="badge">{{ column.cards.length }}</span>
+        <span class="badge">{{ visibleCount }}</span>
       </template>
       <input
         v-else
@@ -102,8 +105,16 @@ function onDragEnd() {
         @keydown.esc="editing = false"
         @blur="saveRename"
       />
-      <!-- Терминальную колонку («Готово») удалять нельзя — она выполняет роль галочки «выполнено» -->
-      <button v-if="!column.isTerminal" class="btn btn-ghost btn-sm" aria-label="Удалить колонку" @click="remove">&times;</button>
+      <!-- Терминальную «Готово» удалять нельзя — кнопку прячем (visibility:hidden), но МЕСТО
+           сохраняем, чтобы счётчик и шапка были на одном уровне с остальными колонками. -->
+      <button
+        class="btn btn-ghost btn-sm kanban-col__del"
+        :class="{ 'is-invisible': column.isTerminal }"
+        :aria-hidden="column.isTerminal || undefined"
+        :tabindex="column.isTerminal ? -1 : undefined"
+        aria-label="Удалить колонку"
+        @click="!column.isTerminal && remove()"
+      >&times;</button>
     </div>
 
     <draggable
@@ -144,14 +155,24 @@ function onDragEnd() {
   border: 1px solid var(--border);
   border-radius: var(--r-lg);
   padding: 14px;
-  max-height: 100%;
+  /* высоту задаёт align-items:stretch у .board-row (все колонки = самой высокой).
+     Внутренних скроллов НЕТ — весь канбан листается одним скроллом .board-viewport. */
 }
-.kanban-col__head { display: flex; align-items: center; gap: 8px; }
+/* Шапка колонки прилипает к верху при вертикальном скролле канбана (.board-viewport).
+   Фон = фон колонки, чтобы карточки уезжали ровно под шапку; z-index выше карточек. */
+.kanban-col__head {
+  display: flex; align-items: center; gap: 8px;
+  position: sticky; top: 0; z-index: 2;
+  background: var(--surface);
+  padding-bottom: 10px;
+}
+/* кнопка удаления в «Готово»: скрыта, но занимает место (выравнивание счётчика/шапки) */
+.kanban-col__del.is-invisible { visibility: hidden; pointer-events: none; }
 .kanban-col__title { flex: 1; cursor: grab; }
-/* overflow по обеим осям задан явно: при overflow-y:auto + overflow-x:visible
-   спека форсит overflow-x → auto, и горизонтальный скролл вылезал в drag.
-   Карточки — вертикальный стек, по горизонтали не скроллятся никогда. */
-.kanban-col__cards { display: flex; flex-direction: column; gap: 10px; overflow-x: hidden; overflow-y: auto; min-height: 24px; }
+/* flex:1 — список тянется на всю высоту колонки, прижимая форму добавления вниз
+   (и терминальная «Готово» без формы добавления не короче остальных). Без overflow:
+   колонка растёт по контенту, скроллит весь канбан целиком (.board-viewport). */
+.kanban-col__cards { flex: 1; display: flex; flex-direction: column; gap: 10px; min-height: 24px; }
 .kanban-col__add .input { font-size: 14px; }
 </style>
 
@@ -159,9 +180,13 @@ function onDragEnd() {
 /* ghost (перетаскиваемая копия) — не scoped, чтобы класс применился к клону */
 .kanban-ghost { opacity: 0.4; }
 
-/* во время drag клиппим overflow всех списков карточек (класс is-dragging висит
-   на .board-main): FLIP-трансформ переносимой карточки на ~160мс выходит за
-   content-box принимающей колонки по обеим осям — без клиппинга мигают скроллбары.
-   Правило не scoped: цель — .kanban-col__cards в любой колонке доски. */
-.is-dragging .kanban-col__cards { overflow: hidden; }
+/* Фильтры доски — чистый CSS: контекст на .board-main ([data-filter-*]), карточки несут свои
+   data-атрибуты (KanbanCard). Скрываем несоответствующие; они остаются в DOM и :list драггабла,
+   поэтому индексы DnD не плывут, а vnode айтема vuedraggable не трогаем (иначе ломается его рендер). */
+[data-filter-assignee="him"] .task:not([data-assignee="him"]),
+[data-filter-assignee="her"] .task:not([data-assignee="her"]),
+[data-filter-assignee="together"] .task:not([data-assignee="together"]),
+[data-filter-deadline="has"] .task:not([data-has-due]),
+[data-filter-deadline="none"] .task[data-has-due],
+[data-filter-deadline="overdue"] .task:not([data-overdue]) { display: none; }
 </style>

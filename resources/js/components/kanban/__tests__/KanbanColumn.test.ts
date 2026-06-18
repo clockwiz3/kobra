@@ -44,15 +44,19 @@ describe('KanbanColumn drag lifecycle', () => {
 describe('KanbanColumn — терминальная колонка («Готово»)', () => {
   beforeEach(() => setActivePinia(createPinia()))
 
-  it('обычная колонка: есть кнопка удаления и форма добавления', () => {
+  it('обычная колонка: кнопка удаления активна, есть форма добавления', () => {
     const w = mountColumn({ isTerminal: false })
-    expect(w.find('[aria-label="Удалить колонку"]').exists()).toBe(true)
+    const del = w.find('[aria-label="Удалить колонку"]')
+    expect(del.exists()).toBe(true)
+    expect(del.classes()).not.toContain('is-invisible')
     expect(w.find('.kanban-col__add').exists()).toBe(true)
   })
 
-  it('терминальная колонка: удаление и прямое добавление скрыты', () => {
+  it('терминальная колонка: кнопка удаления скрыта (место сохранено), формы добавления нет', () => {
     const w = mountColumn({ isTerminal: true })
-    expect(w.find('[aria-label="Удалить колонку"]').exists()).toBe(false)
+    const del = w.find('[aria-label="Удалить колонку"]')
+    expect(del.exists()).toBe(true) // место под кнопку сохранено для выравнивания
+    expect(del.classes()).toContain('is-invisible') // но скрыта
     expect(w.find('.kanban-col__add').exists()).toBe(false)
   })
 })

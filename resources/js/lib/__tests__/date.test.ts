@@ -10,6 +10,7 @@ import {
   isRangeValid,
   isInRange,
   isSameDate,
+  isOverdue,
   dayjs,
 } from '@/lib/date'
 
@@ -130,5 +131,21 @@ describe('isInRange / isSameDate', () => {
     expect(isSameDate('2026-06-17', '2026-06-17')).toBe(true)
     expect(isSameDate('2026-06-17', '2026-06-18')).toBe(false)
     expect(isSameDate(null, '2026-06-17')).toBe(false)
+  })
+})
+
+describe('isOverdue (сегодня = 2026-06-17)', () => {
+  it('дата в прошлом → true, сегодня/будущее → false', () => {
+    expect(isOverdue('2026-06-16')).toBe(true)
+    expect(isOverdue('2026-06-17')).toBe(false) // строго раньше сегодня
+    expect(isOverdue('2026-06-18')).toBe(false)
+  })
+  it('эффективная дата — это end (конец диапазона), а не start', () => {
+    expect(isOverdue('2026-06-10', '2026-06-20')).toBe(false) // диапазон ещё не закончился
+    expect(isOverdue('2026-06-01', '2026-06-16')).toBe(true) // закончился вчера
+  })
+  it('пусто → false', () => {
+    expect(isOverdue(null)).toBe(false)
+    expect(isOverdue(undefined, undefined)).toBe(false)
   })
 })

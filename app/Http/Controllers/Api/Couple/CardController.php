@@ -27,7 +27,7 @@ class CardController extends CoupleController
         $data = $request->validated();
         $column = BoardColumn::findOrFail($data['column_id']); // scoped
         // Опциональные параметры карточки прокидываем в сервис attrs-массивом (масштабирование).
-        $attrs = array_intersect_key($data, array_flip(['description', 'due_at', 'due_end_at']));
+        $attrs = array_intersect_key($data, array_flip(['description', 'due_at', 'due_end_at', 'due_time', 'priority']));
         Log::debug('[CardController.store]', ['column_id' => $data['column_id'], 'keys' => array_keys($data)]);
 
         $card = $this->cards->create(

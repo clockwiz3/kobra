@@ -13,8 +13,10 @@ class CardData extends Data
         public string $title,
         public ?string $description,
         public string $assignee, // him|her|together
+        public string $priority, // low|normal|high|critical
         public ?string $dueAt,    // ISO 8601 — одиночная дата либо начало диапазона
         public ?string $dueEndAt, // ISO 8601 — конец диапазона (null = одиночная дата)
+        public ?string $dueTime,  // 'HH:MM' — время суток (null = без времени)
         public bool $done,
         public int $position,
     ) {
@@ -28,8 +30,10 @@ class CardData extends Data
             title: $card->title,
             description: $card->description,
             assignee: $card->assignee->value,
+            priority: $card->priority->value,
             dueAt: $card->due_at?->toIso8601String(),
             dueEndAt: $card->due_end_at?->toIso8601String(),
+            dueTime: $card->due_time,
             done: $card->done,
             position: $card->position,
         );

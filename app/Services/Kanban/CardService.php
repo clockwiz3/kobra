@@ -40,9 +40,11 @@ class CardService
             'board_column_id' => $column->id,
             'title' => $title,
             'assignee' => $assignee,
+            'priority' => $attrs['priority'] ?? 'normal',
             'description' => $attrs['description'] ?? null,
             'due_at' => $attrs['due_at'] ?? null,
             'due_end_at' => $attrs['due_end_at'] ?? null,
+            'due_time' => $attrs['due_time'] ?? null,
             'done' => $bornDone, // явно: иначе in-memory done=null → CardData(bool $done) падает (DB-default не подтягивается без refresh)
             'completed_at' => $bornDone ? now() : null,
             'position' => $column->cards()->count(),
@@ -124,6 +126,7 @@ class CardService
             // Целевая колонка: текущий порядок БЕЗ перемещаемой карточки.
             $targetIds = Card::query()
                 ->where('board_column_id', $toColumnId)
+                ->where('on_board', true) // позиции считаем только среди карточек на доске
                 ->where('id', '!=', $card->id)
                 ->orderBy('position')->orderBy('id')
                 ->pluck('id')->all();
@@ -137,6 +140,7 @@ class CardService
             if ($fromColumnId !== $toColumnId) {
                 $sourceIds = Card::query()
                     ->where('board_column_id', $fromColumnId)
+                    ->where('on_board', true) // позиции считаем только среди карточек на доске
                     ->orderBy('position')->orderBy('id')
                     ->pluck('id')->all();
                 $this->renumber($sourceIds);

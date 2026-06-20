@@ -26,12 +26,14 @@ const props = withDefaults(
     title?: string
     /** Сторона выезда. По умолчанию справа (масштабирование: панели слева тоже поддержаны). */
     side?: 'right' | 'left'
-    width?: 'sm' | 'md' | 'lg'
+    width?: 'sm' | 'md' | 'lg' | 'xl'
     closable?: boolean
     closeOnOverlay?: boolean
     closeOnEsc?: boolean
     /** Цель Teleport — `.ds-root` (тематическое поддерево), см. пояснение в BaseModal. */
     to?: string
+    /** id панели для связки `aria-controls` с кнопкой-инициатором (напр. бургер). */
+    panelId?: string
   }>(),
   { side: 'right', width: 'md', closable: true, closeOnOverlay: true, closeOnEsc: true, to: '.ds-root' },
 )
@@ -130,6 +132,7 @@ watch(
       >
         <aside
           ref="panel"
+          :id="panelId"
           class="drawer"
           :class="[`drawer--${width}`, `drawer--${side}`]"
           role="dialog"

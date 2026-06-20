@@ -1,7 +1,7 @@
 // Typed-клиент couple-API канбана. Bearer-токен из localStorage (до появления полноценного auth).
 // При 401/403 функции возвращают null/false — store остаётся в мок-режиме.
 
-import type { CardAssignee, CardPatch } from '@/types/board'
+import type { CardAssignee, CardPatch, CardPriority } from '@/types/board'
 import { useLogger } from '@/composables/useLogger'
 
 const log = useLogger('boardApi')
@@ -12,8 +12,10 @@ export interface ApiCard {
   title: string
   description: string | null
   assignee: CardAssignee
+  priority: CardPriority
   dueAt: string | null
   dueEndAt: string | null
+  dueTime: string | null
   done: boolean
   position: number
 }
@@ -24,8 +26,10 @@ function toSnakePatch(patch: CardPatch): Record<string, unknown> {
   if ('title' in patch) body.title = patch.title
   if ('description' in patch) body.description = patch.description
   if ('assignee' in patch) body.assignee = patch.assignee
+  if ('priority' in patch) body.priority = patch.priority
   if ('dueAt' in patch) body.due_at = patch.dueAt
   if ('dueEndAt' in patch) body.due_end_at = patch.dueEndAt
+  if ('dueTime' in patch) body.due_time = patch.dueTime
   return body
 }
 
@@ -84,6 +88,10 @@ export const boardApi = {
   },
   async removeCard(cardId: number): Promise<boolean> {
     return (await call('DELETE', `/cards/${cardId}`)).ok
+  },
+  /** Убрать карточку с доски (в бэклог) — НЕ удаление: on_board=false, карточка остаётся в БД. */
+  async removeFromBoard(cardId: number): Promise<boolean> {
+    return (await call('PATCH', `/cards/${cardId}`, { on_board: false })).ok
   },
   async addColumn(boardId: number, title: string): Promise<ApiColumn | null> {
     return jsonOrNull<ApiColumn>(await call('POST', '/columns', { board_id: boardId, title }))

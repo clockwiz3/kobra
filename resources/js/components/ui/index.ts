@@ -32,6 +32,7 @@ export { default as BaseCheckbox } from './BaseCheckbox.vue'
 export { default as BaseRadio } from './BaseRadio.vue'
 export { default as BaseRadioGroup } from './BaseRadioGroup.vue'
 export { default as BaseDatePicker } from './BaseDatePicker.vue'
+export { default as BaseTimePicker } from './BaseTimePicker.vue'
 
 // — Брендинг / темизация —
 export { default as BrandMark } from './BrandMark.vue'

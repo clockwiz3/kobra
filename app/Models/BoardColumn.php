@@ -26,6 +26,8 @@ class BoardColumn extends Model
 
     public function cards(): HasMany
     {
-        return $this->hasMany(Card::class)->orderBy('position');
+        // Только карточки НА доске; «убранные с доски» (on_board=false, бэклог) исключены везде,
+        // где используется этот relation: выборка доски, счётчик позиции при создании и т.п.
+        return $this->hasMany(Card::class)->where('on_board', true)->orderBy('position');
     }
 }

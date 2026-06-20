@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import type { Card, CardAssignee, CardPatch, Column } from '@/types/board'
+import { CARD_TITLE_MAX, type Card, type CardAssignee, type CardPatch, type Column } from '@/types/board'
 import { boardApi, type ApiBoard, type ApiCard, type ApiColumn } from '@/api/board'
 import { isOverdue } from '@/lib/date'
 import { useLogger } from '@/composables/useLogger'
@@ -23,7 +23,7 @@ function mockColumns(): Column[] {
 }
 
 function toCard(api: ApiCard): Card {
-  return { id: String(api.id), title: api.title, description: api.description ?? undefined, assignee: api.assignee, labels: [], dueAt: api.dueAt, dueEndAt: api.dueEndAt, done: api.done }
+  return { id: String(api.id), title: api.title, description: api.description ?? undefined, assignee: api.assignee, priority: api.priority, labels: [], dueAt: api.dueAt, dueEndAt: api.dueEndAt, dueTime: api.dueTime, done: api.done }
 }
 function toColumn(api: ApiColumn): Column {
   return { id: String(api.id), title: api.title, isTerminal: api.isTerminal, cards: api.cards.map(toCard) }
@@ -119,13 +119,15 @@ export const useBoardStore = defineStore('board', () => {
 
   async function addCard(columnId: string, title: string, assignee: CardAssignee = 'together'): Promise<void> {
     const column = columns.value.find((c) => c.id === columnId)
-    if (!column || title.trim() === '') return
+    // лимит названия (синхрон с бэкендом max:100) — бэкстоп к maxlength инпута
+    const clean = title.trim().slice(0, CARD_TITLE_MAX)
+    if (!column || clean === '') return
     if (backed.value) {
-      const api = await boardApi.createCard(Number(columnId), title.trim(), assignee)
+      const api = await boardApi.createCard(Number(columnId), clean, assignee)
       if (api) column.cards.push(toCard(api))
       else await fetchBoard()
     } else {
-      column.cards.push({ id: uid('card'), title: title.trim(), assignee, labels: [], dueAt: null, done: false })
+      column.cards.push({ id: uid('card'), title: clean, assignee, labels: [], dueAt: null, done: false })
     }
     log.debug('addCard', { columnId })
   }
@@ -137,6 +139,8 @@ export const useBoardStore = defineStore('board', () => {
   async function updateCard(cardId: string, patch: CardPatch): Promise<void> {
     const found = findCard(cardId)
     if (!found) return
+    // лимит названия (синхрон с бэкендом max:100) — бэкстоп к maxlength инпута
+    if (typeof patch.title === 'string') patch = { ...patch, title: patch.title.slice(0, CARD_TITLE_MAX) }
     const { card } = found
     const snapshot = { ...card } // для отката
     Object.assign(card, patch) // оптимистично
@@ -156,6 +160,36 @@ export const useBoardStore = defineStore('board', () => {
     found.column.cards = found.column.cards.filter((c) => c.id !== cardId)
     if (selectedCardId.value === cardId) selectedCardId.value = null // закрыть панель удалённой карточки
     if (backed.value) await boardApi.removeCard(Number(cardId))
+  }
+
+  /** Перенести карточку в начало/конец её колонки (пункт меню карточки). */
+  async function moveCardToEdge(cardId: string, edge: 'top' | 'bottom'): Promise<void> {
+    const found = findCard(cardId)
+    if (!found) return
+    const { column, card } = found
+    const i = column.cards.indexOf(card)
+    if (i === -1) return
+    column.cards.splice(i, 1)
+    const toIndex = edge === 'top' ? 0 : column.cards.length
+    column.cards.splice(toIndex, 0, card)
+    if (backed.value) {
+      const api = await boardApi.moveCard(Number(cardId), Number(column.id), toIndex)
+      if (!api) await fetchBoard()
+    }
+    log.debug('moveCardToEdge', { cardId, edge, toIndex })
+  }
+
+  /** Убрать карточку с доски (в бэклог) — НЕ удаление: остаётся в БД (on_board=false). */
+  async function removeFromBoard(cardId: string): Promise<void> {
+    const found = findCard(cardId)
+    if (!found) return
+    found.column.cards = found.column.cards.filter((c) => c.id !== cardId)
+    if (selectedCardId.value === cardId) selectedCardId.value = null
+    if (backed.value) {
+      const ok = await boardApi.removeFromBoard(Number(cardId))
+      if (!ok) await fetchBoard() // откат оптимистичного удаления при провале
+    }
+    log.debug('removeFromBoard', { cardId })
   }
 
   /**
@@ -245,7 +279,7 @@ export const useBoardStore = defineStore('board', () => {
     selectedCardId, selectedCard, openCard, closeCard,
     justClosedCardId,
     filterAssignee, filterDeadline, cardMatchesFilter,
-    fetchBoard, addCard, updateCard, removeCard, persistCardMove,
+    fetchBoard, addCard, updateCard, removeCard, persistCardMove, moveCardToEdge, removeFromBoard,
     addColumn, renameColumn, removeColumn, persistColumnReorder,
   }
 })

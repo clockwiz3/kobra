@@ -59,6 +59,88 @@ class CardUpdateTest extends TestCase
         $this->assertDatabaseHas('cards', ['id' => $card, 'assignee' => 'him']);
     }
 
+    /** Лимит названия: апдейт title > 100 символов → 422 (валидация title). */
+    public function test_update_rejects_title_over_100_chars(): void
+    {
+        $token = $this->login();
+        $card = $this->createCard($token, $this->firstColumnId($token));
+
+        $this->withToken($token)->patchJson("/api/couple/cards/{$card}", [
+            'title' => str_repeat('я', 101),
+        ])->assertStatus(422)->assertJsonValidationErrors(['title']);
+    }
+
+    public function test_update_sets_due_time(): void
+    {
+        $token = $this->login();
+        $card = $this->createCard($token, $this->firstColumnId($token));
+
+        $this->withToken($token)->patchJson("/api/couple/cards/{$card}", [
+            'due_time' => '08:05',
+        ])->assertOk()->assertJsonPath('dueTime', '08:05');
+
+        $this->assertDatabaseHas('cards', ['id' => $card, 'due_time' => '08:05']);
+    }
+
+    public function test_update_rejects_invalid_time_format(): void
+    {
+        $token = $this->login();
+        $card = $this->createCard($token, $this->firstColumnId($token));
+
+        $this->withToken($token)->patchJson("/api/couple/cards/{$card}", [
+            'due_time' => '25:00',
+        ])->assertStatus(422)->assertJsonValidationErrors(['due_time']);
+    }
+
+    public function test_update_clears_due_time_with_null(): void
+    {
+        $token = $this->login();
+        $card = $this->createCard($token, $this->firstColumnId($token));
+
+        $this->withToken($token)->patchJson("/api/couple/cards/{$card}", ['due_time' => '08:05'])->assertOk();
+        $this->withToken($token)->patchJson("/api/couple/cards/{$card}", ['due_time' => null])
+            ->assertOk()->assertJsonPath('dueTime', null);
+    }
+
+    public function test_update_sets_priority(): void
+    {
+        $token = $this->login();
+        $card = $this->createCard($token, $this->firstColumnId($token));
+
+        $this->withToken($token)->patchJson("/api/couple/cards/{$card}", [
+            'priority' => 'high',
+        ])->assertOk()->assertJsonPath('priority', 'high');
+
+        $this->assertDatabaseHas('cards', ['id' => $card, 'priority' => 'high']);
+    }
+
+    public function test_update_rejects_invalid_priority(): void
+    {
+        $token = $this->login();
+        $card = $this->createCard($token, $this->firstColumnId($token));
+
+        $this->withToken($token)->patchJson("/api/couple/cards/{$card}", [
+            'priority' => 'urgent',
+        ])->assertStatus(422)->assertJsonValidationErrors(['priority']);
+    }
+
+    /** «Убрать с доски» (on_board=false): карточка пропадает из выдачи доски, но остаётся в БД (НЕ удаление). */
+    public function test_remove_from_board_hides_card_but_keeps_it(): void
+    {
+        $token = $this->login();
+        $col = $this->firstColumnId($token);
+        $card = $this->createCard($token, $col);
+
+        $onBoard = collect($this->withToken($token)->getJson('/api/couple/board')->json('columns.0.cards'))->pluck('id');
+        $this->assertTrue($onBoard->contains($card));
+
+        $this->withToken($token)->patchJson("/api/couple/cards/{$card}", ['on_board' => false])->assertOk();
+
+        $afterIds = collect($this->withToken($token)->getJson('/api/couple/board')->json('columns.0.cards'))->pluck('id');
+        $this->assertFalse($afterIds->contains($card), 'карточка убрана с доски');
+        $this->assertDatabaseHas('cards', ['id' => $card, 'on_board' => false]); // но осталась в БД
+    }
+
     public function test_update_sets_single_due_date_and_leaves_end_null(): void
     {
         $token = $this->login();

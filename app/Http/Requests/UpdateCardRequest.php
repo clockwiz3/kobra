@@ -23,11 +23,25 @@ class UpdateCardRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'title' => ['sometimes', 'string', 'max:160'],
+            'title' => ['sometimes', 'string', 'max:100'],
             'description' => ['sometimes', 'nullable', 'string'],
             'assignee' => ['sometimes', 'in:him,her,together'],
+            'priority' => ['sometimes', 'in:low,normal,high,critical'],
+            'on_board' => ['sometimes', 'boolean'],
             'due_at' => ['sometimes', 'nullable', 'date'],
             'due_end_at' => ['sometimes', 'nullable', 'date'],
+            'due_time' => ['sometimes', 'nullable', 'date_format:H:i'],
+        ];
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public function messages(): array
+    {
+        return [
+            'title.max' => 'Название не длиннее 100 символов.',
+            'due_time.date_format' => 'Время в формате ЧЧ:ММ.',
         ];
     }
 

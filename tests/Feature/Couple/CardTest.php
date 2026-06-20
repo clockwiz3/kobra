@@ -47,6 +47,73 @@ class CardTest extends TestCase
         $this->assertDatabaseHas('cards', ['title' => 'Свидание у моря', 'done' => false]);
     }
 
+    /** Лимит названия: создание карточки с title > 100 символов → 422 (валидация title). */
+    public function test_create_card_rejects_title_over_100_chars(): void
+    {
+        $token = $this->login();
+        $columnId = $this->withToken($token)->getJson('/api/couple/board')->assertOk()->json('columns.0.id');
+
+        $this->withToken($token)->postJson('/api/couple/cards', [
+            'column_id' => $columnId,
+            'title' => str_repeat('я', 101),
+        ])->assertStatus(422)->assertJsonValidationErrors(['title']);
+    }
+
+    /** Граница лимита: ровно 100 символов — принимается (201). */
+    public function test_create_card_accepts_title_exactly_100_chars(): void
+    {
+        $token = $this->login();
+        $columnId = $this->withToken($token)->getJson('/api/couple/board')->assertOk()->json('columns.0.id');
+        $title = str_repeat('я', 100);
+
+        $this->withToken($token)->postJson('/api/couple/cards', [
+            'column_id' => $columnId,
+            'title' => $title,
+        ])->assertStatus(201)->assertJsonPath('title', $title);
+    }
+
+    /** Время суток: создание карточки с due_time='HH:MM' персистится и возвращается. */
+    public function test_create_card_persists_due_time(): void
+    {
+        $token = $this->login();
+        $columnId = $this->withToken($token)->getJson('/api/couple/board')->assertOk()->json('columns.0.id');
+
+        $this->withToken($token)->postJson('/api/couple/cards', [
+            'column_id' => $columnId,
+            'title' => 'Свидание',
+            'due_time' => '19:30',
+        ])->assertStatus(201)->assertJsonPath('dueTime', '19:30');
+
+        $this->assertDatabaseHas('cards', ['title' => 'Свидание', 'due_time' => '19:30']);
+    }
+
+    /** Приоритет: значение сохраняется и возвращается. */
+    public function test_create_card_persists_priority(): void
+    {
+        $token = $this->login();
+        $columnId = $this->withToken($token)->getJson('/api/couple/board')->assertOk()->json('columns.0.id');
+
+        $this->withToken($token)->postJson('/api/couple/cards', [
+            'column_id' => $columnId,
+            'title' => 'Срочное',
+            'priority' => 'critical',
+        ])->assertStatus(201)->assertJsonPath('priority', 'critical');
+
+        $this->assertDatabaseHas('cards', ['title' => 'Срочное', 'priority' => 'critical']);
+    }
+
+    /** Приоритет: без явного значения — дефолт 'normal'. */
+    public function test_create_card_defaults_priority_to_normal(): void
+    {
+        $token = $this->login();
+        $columnId = $this->withToken($token)->getJson('/api/couple/board')->assertOk()->json('columns.0.id');
+
+        $this->withToken($token)->postJson('/api/couple/cards', [
+            'column_id' => $columnId,
+            'title' => 'Обычное',
+        ])->assertStatus(201)->assertJsonPath('priority', 'normal');
+    }
+
     /** @return int id созданной карточки */
     private function createCard(string $token, int $columnId, string $title): int
     {

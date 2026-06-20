@@ -46,8 +46,18 @@ describe('CardDetailDrawer', () => {
     expect(w.find('[role="dialog"]').exists()).toBe(true)
     expect((w.find('input.input').element as HTMLInputElement).value).toBe('Тест')
     expect((w.find('textarea.textarea').element as HTMLTextAreaElement).value).toBe('desc')
-    // 3 исполнителя + 2 режима дедлайна = 5 радио
-    expect(w.findAll('input[type="radio"]')).toHaveLength(5)
+    // 3 исполнителя + 4 приоритета + 2 режима дедлайна = 9 радио
+    expect(w.findAll('input[type="radio"]')).toHaveLength(9)
+  })
+
+  it('счётчик символов названия показывает count/максимум и обновляется при вводе', async () => {
+    selectCard(makeCard({ title: 'Тест' })) // 4 символа
+    const w = mountDrawer()
+
+    expect(w.find('.field__counter').text()).toBe('4/100')
+
+    await w.find('input.input').setValue('Новое название') // 14 символов
+    expect(w.find('.field__counter').text()).toBe('14/100')
   })
 
   it('изменение названия триггерит debounced updateCard', async () => {
@@ -72,12 +82,23 @@ describe('CardDetailDrawer', () => {
     expect(spy).toHaveBeenCalledWith('5', expect.objectContaining({ assignee: 'him' }))
   })
 
+  it('смена приоритета триггерит updateCard', async () => {
+    selectCard(makeCard())
+    const w = mountDrawer()
+    const spy = vi.spyOn(store, 'updateCard').mockResolvedValue()
+
+    // радио: исполнитель(0-2), приоритет(3-6: low,normal,high,critical), дедлайн(7-8)
+    await w.findAll('input[type="radio"]')[5].setValue() // приоритет 'high'
+    await vi.advanceTimersByTimeAsync(500)
+    expect(spy).toHaveBeenLastCalledWith('5', expect.objectContaining({ priority: 'high' }))
+  })
+
   it('переключение в режим «Период» и выбор дат шлёт dueAt+dueEndAt', async () => {
     selectCard(makeCard())
     const w = mountDrawer()
     const spy = vi.spyOn(store, 'updateCard').mockResolvedValue()
 
-    await w.findAll('input[type="radio"]')[4].setValue() // режим range
+    await w.findAll('input[type="radio"]')[8].setValue() // режим range (после приоритета индексы сдвинулись)
     await w.find('.datepicker__trigger').trigger('click')
     await w.find('[data-iso="2026-06-17"]').trigger('click')
     await w.find('[data-iso="2026-06-24"]').trigger('click')
@@ -86,6 +107,20 @@ describe('CardDetailDrawer', () => {
     expect(spy).toHaveBeenLastCalledWith('5', expect.objectContaining({
       dueAt: '2026-06-17', dueEndAt: '2026-06-24',
     }))
+  })
+
+  it('выбор времени (час + минута) шлёт dueTime в патче', async () => {
+    selectCard(makeCard())
+    const w = mountDrawer()
+    const spy = vi.spyOn(store, 'updateCard').mockResolvedValue()
+
+    await w.find('.timepicker__trigger').trigger('click')
+    const cols = w.findAll('.timepicker__col')
+    await cols[0].findAll('.timepicker__cell')[9].trigger('click') // час 09 → 09:00
+    await cols[1].findAll('.timepicker__cell')[6].trigger('click') // мин 30 → 09:30
+
+    await vi.advanceTimersByTimeAsync(500)
+    expect(spy).toHaveBeenLastCalledWith('5', expect.objectContaining({ dueTime: '09:30' }))
   })
 
   it('закрытие панели до окончания дебаунса всё равно отправляет правки (баг-фикс)', async () => {

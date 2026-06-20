@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Concerns\CoupleScoped;
 use App\Enums\CardAssignee;
+use App\Enums\CardPriority;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -19,10 +20,12 @@ class Card extends Model
     {
         return [
             'assignee' => CardAssignee::class,
+            'priority' => CardPriority::class,
             'due_at' => 'datetime',
             'due_end_at' => 'datetime',
             'completed_at' => 'datetime',
             'done' => 'boolean',
+            'on_board' => 'boolean',
             'position' => 'integer',
         ];
     }

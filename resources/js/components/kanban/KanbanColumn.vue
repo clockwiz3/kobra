@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import draggable from 'vuedraggable'
-import type { Card, Column } from '@/types/board'
+import { CARD_TITLE_MAX, type Card, type Column } from '@/types/board'
 import KanbanCard from './KanbanCard.vue'
 import { useBoardStore } from '@/stores/board'
 import { useLogger } from '@/composables/useLogger'
@@ -95,7 +95,8 @@ function onDragEnd() {
     <div class="kanban-col__head">
       <template v-if="!editing">
         <h3 class="sub-h kanban-col__title" style="margin: 0" @dblclick="startRename">{{ column.title }}</h3>
-        <span class="badge">{{ visibleCount }}</span>
+        <!-- В терминальной «Готово» крестика нет → счётчик уводим к правому краю (на место крестика). -->
+        <span class="badge" :class="{ 'kanban-col__count--end': column.isTerminal }">{{ visibleCount }}</span>
       </template>
       <input
         v-else
@@ -106,7 +107,8 @@ function onDragEnd() {
         @blur="saveRename"
       />
       <!-- Терминальную «Готово» удалять нельзя — кнопку прячем (visibility:hidden), но МЕСТО
-           сохраняем, чтобы счётчик и шапка были на одном уровне с остальными колонками. -->
+           сохраняем: она самый высокий элемент шапки, поэтому держит её высоту вровень с
+           остальными колонками (счётчик при этом уезжает правее неё, см. --count--end). -->
       <button
         class="btn btn-ghost btn-sm kanban-col__del"
         :class="{ 'is-invisible': column.isTerminal }"
@@ -117,30 +119,34 @@ function onDragEnd() {
       >&times;</button>
     </div>
 
-    <draggable
-      :list="column.cards"
-      group="cards"
-      item-key="id"
-      class="kanban-col__cards ds-scroll"
-      ghost-class="kanban-ghost"
-      :animation="reduced ? 0 : 160"
-      @change="onCardChange"
-      @start="onDragStart"
-      @end="onDragEnd"
-    >
-      <template #item="{ element }">
-        <KanbanCard
-          :card="element"
-          @open="store.openCard(element.id)"
-          @remove="store.removeCard(element.id)"
-        />
-      </template>
-    </draggable>
+    <!-- Скролл-область ПОД шапкой: только она прокручивается вертикально, поэтому скроллбар
+         не заезжает на шапку. Шапка выше — статичная «крышка» (не sticky). -->
+    <div class="kanban-col__scroll ds-scroll">
+      <draggable
+        :list="column.cards"
+        group="cards"
+        item-key="id"
+        class="kanban-col__cards"
+        ghost-class="kanban-ghost"
+        :animation="reduced ? 0 : 160"
+        @change="onCardChange"
+        @start="onDragStart"
+        @end="onDragEnd"
+      >
+        <template #item="{ element }">
+          <KanbanCard
+            :card="element"
+            @open="store.openCard(element.id)"
+            @remove="store.removeCard(element.id)"
+          />
+        </template>
+      </draggable>
 
-    <!-- В терминальной колонке карточки не создают напрямую — они попадают в неё переносом -->
-    <form v-if="!column.isTerminal" class="kanban-col__add" @submit.prevent="addCard">
-      <input v-model="newTitle" class="input" placeholder="+ карточка" />
-    </form>
+      <!-- В терминальной колонке карточки не создают напрямую — они попадают в неё переносом -->
+      <form v-if="!column.isTerminal" class="kanban-col__add" @submit.prevent="addCard">
+        <input v-model="newTitle" class="input" :maxlength="CARD_TITLE_MAX" placeholder="+ карточка" />
+      </form>
+    </div>
   </div>
 </template>
 
@@ -148,47 +154,62 @@ function onDragEnd() {
 .kanban-col {
   width: 286px;
   flex: none;
+  /* высота = вьюпорт (align-items:stretch + height:100% у .board-row) */
+  height: 100%;
   display: flex;
   flex-direction: column;
-  /* без column-gap: иначе между sticky-шапкой и карточками прозрачный зазор, в котором при
-     скролле «висит» обрезанная карточка. Отступы задаём паддингом шапки и margin формы добавления. */
-  gap: 0;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--r-lg);
-  /* верхний padding ушёл в sticky-шапку: иначе при скролле шапка сперва «дёргается» вверх
-     (проезжает эти 14px), прежде чем прилипнуть. */
-  padding: 0 14px 14px;
-  /* высоту задаёт align-items:stretch у .board-row (все колонки = самой высокой).
-     Внутренних скроллов НЕТ — весь канбан листается одним скроллом .board-viewport. */
+  /* колонка сама НЕ скроллится — скроллит .kanban-col__scroll под шапкой. overflow:hidden
+     клипает контент (статичную шапку сверху и список снизу) ровно по скруглённым углам. */
+  overflow: hidden;
 }
-/* Шапка колонки прилипает к верху при вертикальном скролле канбана (.board-viewport).
-   Фон = фон колонки, чтобы карточки уезжали ровно под шапку; z-index выше карточек. */
+/* Статичная «крышка» колонки (НЕ sticky): всегда сверху, скроллбар на неё не заезжает, т.к.
+   скроллится только область ниже. position:relative + z-index — чтобы её нижняя тень рисовалась
+   ПОВЕРХ скролл-области (карточки уходят под тень). Углы скругляет overflow:hidden у колонки. */
 .kanban-col__head {
+  position: relative; z-index: 1;
   display: flex; align-items: center; gap: 8px;
-  position: sticky; top: 0; z-index: 2;
   background: var(--surface);
-  /* банд во всю ширину колонки (компенсируем боковой padding) со скруглением сверху как у
-     колонки: прилипает сразу (без рывка) и сохраняет border-radius верхних углов при скролле. */
-  margin: 0 -14px;
-  /* нижний padding = отступ до карточек И зона перекрытия: карточки уезжают ровно под банд */
   padding: 14px 14px 12px;
-  border-radius: var(--r-lg) var(--r-lg) 0 0;
+  /* тонкая нижняя тень — отделяет шапку от уезжающих под неё карточек (во всех темах) */
+  box-shadow: 0 8px 10px -10px rgba(0, 0, 0, 0.45);
 }
-/* кнопка удаления в «Готово»: скрыта, но занимает место (выравнивание счётчика/шапки) */
+/* в светлой теме чёрная тень жёсткая → делаем мягче и теплее (под палитру темы).
+   data-theme висит на .ds-root (предок), поэтому селектор с ним — рабочий и в scoped. */
+[data-theme="light"] .kanban-col__head { box-shadow: 0 7px 14px -10px rgba(110, 72, 52, 0.22); }
+/* Скролл-область под шапкой — единственный вертикальный скроллер колонки. padding-top = отступ
+   первой карточки от шапки/тени (чтобы не липла вплотную). */
+.kanban-col__scroll {
+  flex: 1; min-height: 0;
+  overflow-y: auto; overflow-x: hidden;
+  padding: 10px 14px 14px;
+  display: flex; flex-direction: column;
+}
+/* кнопка удаления в «Готово»: скрыта, но занимает место (держит высоту шапки) */
 .kanban-col__del.is-invisible { visibility: hidden; pointer-events: none; }
+/* в «Готово» счётчик становится последним flex-элементом (после скрытого крестика) → прижат
+   к правому краю, ровно туда, где у остальных колонок стоит крестик */
+.kanban-col__count--end { order: 1; }
 .kanban-col__title { flex: 1; cursor: grab; }
-/* flex:1 — список тянется на всю высоту колонки, прижимая форму добавления вниз
-   (и терминальная «Готово» без формы добавления не короче остальных). Без overflow:
-   колонка растёт по контенту, скроллит весь канбан целиком (.board-viewport). */
-.kanban-col__cards { flex: 1; display: flex; flex-direction: column; gap: 10px; min-height: 24px; }
-.kanban-col__add { margin-top: 12px; } /* отступ от карточек (column-gap убран) */
+/* flex: 1 0 auto — список заполняет свободную высоту (вся пустая область остаётся зоной дропа
+   для DnD) и прижимает форму вниз, НО не сжимается ниже своего контента (иначе форма
+   «вклинивалась» бы в середину). При многих карточках список = высоте контента и скроллится. */
+.kanban-col__cards { flex: 1 0 auto; display: flex; flex-direction: column; gap: 10px; min-height: 24px; }
+.kanban-col__add { margin-top: 12px; } /* отступ от карточек до формы */
 .kanban-col__add .input { font-size: 14px; }
 </style>
 
 <style>
 /* ghost (перетаскиваемая копия) — не scoped, чтобы класс применился к клону */
 .kanban-ghost { opacity: 0.4; }
+
+/* [FIX] во время DnD клиппим список карточек: FLIP-перестановка иначе вылезает за скролл-область
+   и та моргает скроллбаром при вставке. Клиппим именно список, а не .kanban-col__scroll — её
+   авто-скролл при drag остаётся рабочим. .is-dragging висит на .board-main (см. Board.vue),
+   поэтому правило non-scoped. */
+.is-dragging .kanban-col__cards { overflow: hidden; }
 
 /* Фильтры доски — чистый CSS: контекст на .board-main ([data-filter-*]), карточки несут свои
    data-атрибуты (KanbanCard). Скрываем несоответствующие; они остаются в DOM и :list драггабла,

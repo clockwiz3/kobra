@@ -9,10 +9,10 @@
  * поле в form + ветка в buildPatch(). Контракт патча — CardPatch (@/types/board).
  */
 import { reactive, computed, watch, nextTick, ref, onBeforeUnmount } from 'vue'
-import { BaseDrawer, BaseField, BaseRadioGroup, BaseDatePicker } from '@/components/ui'
+import { BaseDrawer, BaseField, BaseRadioGroup, BaseDatePicker, BaseTimePicker } from '@/components/ui'
 import type { RadioValue } from '@/components/ui/BaseRadioGroup.vue'
 import { useBoardStore } from '@/stores/board'
-import type { Card, CardAssignee, CardPatch } from '@/types/board'
+import { CARD_TITLE_MAX, type Card, type CardAssignee, type CardPatch, type CardPriority } from '@/types/board'
 import { toISODate, type DateRange } from '@/lib/date'
 import { useLogger } from '@/composables/useLogger'
 
@@ -32,6 +32,12 @@ const assigneeOptions: Array<{ value: CardAssignee; label: string }> = [
   { value: 'her', label: 'Она' },
   { value: 'together', label: '♥ Вместе' },
 ]
+const priorityOptions: Array<{ value: CardPriority; label: string }> = [
+  { value: 'low', label: 'Низкий' },
+  { value: 'normal', label: 'Обычный' },
+  { value: 'high', label: 'Высокий' },
+  { value: 'critical', label: 'Критический' },
+]
 const deadlineModeOptions = [
   { value: 'single', label: 'Дата' },
   { value: 'range', label: 'Период' },
@@ -42,9 +48,11 @@ const form = reactive({
   title: '',
   description: '',
   assignee: 'together' as CardAssignee,
+  priority: 'normal' as CardPriority,
   deadlineMode: 'single' as DeadlineMode,
   dateSingle: null as string | null,
   dateRange: null as DateRange | null,
+  time: null as string | null,
 })
 
 const savedState = ref<'idle' | 'saving' | 'saved'>('idle')
@@ -58,6 +66,8 @@ function populate(c: Card | null): void {
   form.title = c.title
   form.description = c.description ?? ''
   form.assignee = c.assignee
+  form.priority = c.priority ?? 'normal'
+  form.time = c.dueTime ?? null
   if (c.dueEndAt) {
     form.deadlineMode = 'range'
     form.dateRange = { start: toISODate(c.dueAt ?? null), end: toISODate(c.dueEndAt) }
@@ -87,6 +97,8 @@ function buildPatch(): CardPatch {
   const patch: CardPatch = {
     description: form.description.trim() === '' ? null : form.description,
     assignee: form.assignee,
+    priority: form.priority,
+    dueTime: form.time,
   }
   if (form.title.trim() !== '') patch.title = form.title.trim()
   if (form.deadlineMode === 'single') {
@@ -137,11 +149,16 @@ onBeforeUnmount(flushSave)
 // — обработчики ввода (только пользовательские изменения попадают в автосейв) —
 function onTitle(v: string): void { form.title = v; scheduleSave() }
 function onDescription(v: string): void { form.description = v; scheduleSave() }
-function onAssignee(v: RadioValue): void { form.assignee = v as CardAssignee; scheduleSave() }
-function onSingle(v: string | DateRange | null): void { form.dateSingle = v as string | null; scheduleSave() }
-function onRange(v: string | DateRange | null): void { form.dateRange = v as DateRange | null; scheduleSave() }
+// emit'ы BaseRadioGroup/BaseDatePicker (defineModel без required) могут отдать undefined —
+// для радио это «нет выбора» (no-op), для дат трактуем как сброс (→ null).
+function onAssignee(v: RadioValue | undefined): void { if (v === undefined) return; form.assignee = v as CardAssignee; scheduleSave() }
+function onPriority(v: RadioValue | undefined): void { if (v === undefined) return; form.priority = v as CardPriority; scheduleSave() }
+function onSingle(v: string | DateRange | null | undefined): void { form.dateSingle = (v ?? null) as string | null; scheduleSave() }
+function onRange(v: string | DateRange | null | undefined): void { form.dateRange = (v ?? null) as DateRange | null; scheduleSave() }
+function onTime(v: string | null | undefined): void { form.time = v ?? null; scheduleSave() }
 
-function onDeadlineMode(v: RadioValue): void {
+function onDeadlineMode(v: RadioValue | undefined): void {
+  if (v === undefined) return
   const m = v as DeadlineMode
   if (m === form.deadlineMode) return
   if (m === 'range') {
@@ -156,11 +173,11 @@ function onDeadlineMode(v: RadioValue): void {
 </script>
 
 <template>
-  <BaseDrawer v-model:open="open" :title="card?.title || 'Карточка'" width="md">
+  <BaseDrawer v-model:open="open" :title="card?.title || 'Карточка'" width="xl">
     <div v-if="card" class="card-detail">
       <!-- Название -->
       <div class="card-detail__section">
-        <BaseField label="Название" :model-value="form.title" placeholder="Что нужно сделать" @update:model-value="onTitle" />
+        <BaseField label="Название" :model-value="form.title" :maxlength="CARD_TITLE_MAX" counter placeholder="Что нужно сделать" @update:model-value="onTitle" />
       </div>
 
       <!-- Описание -->
@@ -172,6 +189,12 @@ function onDeadlineMode(v: RadioValue): void {
       <div class="card-detail__section">
         <span class="card-detail__label">Исполнитель</span>
         <BaseRadioGroup :model-value="form.assignee" :options="assigneeOptions" @update:model-value="onAssignee" />
+      </div>
+
+      <!-- Приоритет -->
+      <div class="card-detail__section">
+        <span class="card-detail__label">Приоритет</span>
+        <BaseRadioGroup :model-value="form.priority" :options="priorityOptions" @update:model-value="onPriority" />
       </div>
 
       <!-- Дедлайн -->
@@ -197,6 +220,12 @@ function onDeadlineMode(v: RadioValue): void {
           placeholder="Выберите период"
           @update:model-value="onRange"
         />
+      </div>
+
+      <!-- Время (H:i, время суток дедлайна/события) -->
+      <div class="card-detail__section">
+        <span class="card-detail__label">Время</span>
+        <BaseTimePicker :model-value="form.time" @update:model-value="onTime" />
       </div>
 
       <p class="card-detail__status" :data-state="savedState">

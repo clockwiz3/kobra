@@ -43,6 +43,11 @@ describe('BaseDrawer', () => {
     expect(w.find('.drawer').classes()).toContain('drawer--lg')
   })
 
+  it('width=xl → drawer--xl', () => {
+    const w = mountOpen({ width: 'xl' })
+    expect(w.find('.drawer').classes()).toContain('drawer--xl')
+  })
+
   it('клик по overlay закрывает с reason=overlay', async () => {
     const w = mountOpen()
     await w.find('.drawer-overlay').trigger('mousedown')

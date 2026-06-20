@@ -1,22 +1,16 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
-import { useRouter } from 'vue-router'
 import draggable from 'vuedraggable'
-import ThemeSwitch from '@/components/ui/ThemeSwitch.vue'
 import BaseButton from '@/components/ui/BaseButton.vue'
-import BrandMark from '@/components/ui/BrandMark.vue'
 import { BaseModal, BaseField, BaseSelect } from '@/components/ui'
 import KanbanColumn from '@/components/kanban/KanbanColumn.vue'
 import { CardDetailDrawer } from '@/components/composite'
 import type { Column } from '@/types/board'
 import { useBoardStore } from '@/stores/board'
-import { useAuthStore } from '@/stores/auth'
 import { useLogger } from '@/composables/useLogger'
 import { prefersReducedMotion } from '@/composables/useTheme'
 
 const store = useBoardStore()
-const auth = useAuthStore()
-const router = useRouter()
 const log = useLogger('Board')
 const reduced = prefersReducedMotion()
 
@@ -41,12 +35,6 @@ function onDeadlineFilter(v: string) { store.filterDeadline = v as typeof store.
 
 // число карточек-плейсхолдеров на колонку скелетона (просто для естественного вида)
 const skeletonColumns = [2, 3, 1, 2]
-
-async function logout() {
-  await auth.logout()
-  log.debug('logout')
-  router.replace({ name: 'login' })
-}
 
 function openAddColumn() {
   newColumn.value = ''
@@ -97,17 +85,10 @@ function onColumnDragEnd() {
 </script>
 
 <template>
-  <header class="topbar">
-    <div class="wrap row">
-      <BrandMark />
-      <div class="controls">
-        <ThemeSwitch />
-        <BaseButton variant="ghost" size="sm" @click="logout">Выйти</BaseButton>
-      </div>
-    </div>
-  </header>
-
-  <main
+  <!-- Доска живёт в слоте AppShell (топбар/меню — в лейауте). Корень страницы — .board-main:
+       занимает высоту слота (flex:1) и держит скролл внутри (горизонталь — лента колонок,
+       вертикаль — внутри каждой колонки). Сама страница вертикально не скроллится. -->
+  <div
     class="board-main"
     :class="{ 'is-dragging': store.dragging }"
     :aria-busy="store.loading"
@@ -166,7 +147,7 @@ function onColumnDragEnd() {
         </template>
       </draggable>
     </div>
-  </main>
+  </div>
 
   <!-- Выезжающая панель параметров карточки (самодостаточна: open берёт из стора) -->
   <CardDetailDrawer />
@@ -184,9 +165,13 @@ function onColumnDragEnd() {
 </template>
 
 <style scoped>
+/* Корень страницы доски = flex-ребёнок .app-main (каркас и высоту даёт AppShell).
+   Высота берётся из flex-слота, а не из magic-числа calc(100vh - 66px);
+   страница вертикально не скроллится — вертикаль только внутри колонок. */
 .board-main {
   padding: 24px 0 0;
-  height: calc(100vh - 66px);
+  flex: 1;
+  min-height: 0;
   display: flex;
   flex-direction: column;
 }
@@ -195,22 +180,22 @@ function onColumnDragEnd() {
 .board-head { display: flex; align-items: center; gap: 16px; margin-bottom: 18px; padding: 0 32px; }
 .board-head__title { font-size: 30px; }
 .board-head__controls { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-/* Единственный скролл-контейнер всего канбана (вертикаль = классический скролл справа +
-   горизонталь для колонок). Внутри — ряд колонок по высоте контента. */
+/* Вьюпорт скроллит ТОЛЬКО по горизонтали (лента колонок). Вертикаль — внутри каждой колонки
+   (overflow-y у .kanban-col), чтобы её скруглённые углы клипали прилипшую шапку (см. KanbanColumn). */
 .board-viewport {
   flex: 1;
   min-height: 0;
-  overflow: auto;
+  overflow-x: auto;
+  overflow-y: hidden;
   padding: 0 32px 16px;
 }
 .board-row {
   display: flex;
   gap: 16px;
-  /* колонки одной высоты «в одну линию»: тянутся по кросс-оси до самой высокой; */
+  /* колонки одной высоты: тянутся по кросс-оси на всю высоту ряда */
   align-items: stretch;
-  /* min-height:100% — когда контента мало, колонки заполняют высоту вьюпорта;
-     высота ряда = самая высокая колонка, поэтому весь канбан листается одним скроллом. */
-  min-height: 100%;
+  /* height:100% — ряд ровно во вьюпорт; колонки = высоте вьюпорта и скроллят контент внутри себя */
+  height: 100%;
   width: max-content;
   min-width: 100%;
 }

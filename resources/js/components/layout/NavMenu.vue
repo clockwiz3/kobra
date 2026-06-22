@@ -7,8 +7,7 @@
  */
 import { watch } from 'vue'
 import { useRoute } from 'vue-router'
-import { UserCircle } from '@vicons/tabler'
-import { BaseDrawer, BrandMark, ThemeSwitch, BaseButton } from '@/components/ui'
+import { BaseDrawer, BrandMark, ThemeSwitch } from '@/components/ui'
 import { navItems } from '@/lib/nav'
 import { useLogger } from '@/composables/useLogger'
 
@@ -66,15 +65,12 @@ function onLogout(): void {
         <div class="nav-foot__row">
           <RouterLink
             :to="{ name: 'profile' }"
-            class="nav-foot__profile"
+            class="nav-foot__link"
             :class="{ 'is-active': route.name === 'profile' }"
             :aria-current="route.name === 'profile' ? 'page' : undefined"
             @click="onNavigate('profile')"
-          >
-            <span class="nav-ico"><UserCircle /></span>
-            <span>Профиль</span>
-          </RouterLink>
-          <BaseButton variant="ghost" size="sm" @click="onLogout">Выйти</BaseButton>
+          >Профиль</RouterLink>
+          <button type="button" class="nav-foot__link" @click="onLogout">Выйти</button>
         </div>
       </div>
     </template>
@@ -125,16 +121,25 @@ function onLogout(): void {
 /* Сегментированный переключатель темы во всю ширину подвала — равные доли, не переполняется. */
 .nav-foot :deep(.theme-switch) { width: 100%; }
 .nav-foot :deep(.theme-switch button) { flex: 1 1 0; min-width: 0; padding-inline: 10px; }
-/* Нижний ряд подвала: «Профиль» слева, «Выйти» справа. */
+/* Нижний ряд подвала: «Профиль» слева, «Выйти» справа — обе как ПЛОСКИЙ ТЕКСТ-ЛИНК:
+   ни фона, ни рамки, ни плашки на hover/active — выделяется только цвет текста. */
 .nav-foot__row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-.nav-foot__profile {
-  display: inline-flex; align-items: center; gap: 8px;
-  padding: 8px 10px; border-radius: var(--r-md);
-  color: var(--text); text-decoration: none; font-weight: 600;
-  transition: background 0.15s var(--ease, ease), color 0.15s var(--ease, ease);
+.nav-foot__link {
+  background: none;
+  border: none;
+  padding: 4px 2px;
+  margin: 0;
+  font: inherit;
+  font-weight: 600;
+  font-size: 13px; /* на 2px меньше базового текста подвала */
+  color: var(--text-muted);
+  text-decoration: none;
+  cursor: pointer;
+  transition: color 0.15s var(--ease, ease);
 }
-.nav-foot__profile:hover { background: var(--surface-2); }
-.nav-foot__profile.is-active { background: var(--surface-2); color: var(--accent); }
-.nav-foot__profile.is-active .nav-ico { color: var(--accent); }
-:global([data-theme="pixel"]) .nav-foot__profile { font-family: var(--font-pill); font-size: 12px; }
+.nav-foot__link:hover { color: var(--accent); }
+.nav-foot__link.is-active { color: var(--accent); }
+.nav-foot__link:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+/* Pixel-тема: тот же пиксельный шрифт, что у разделов/бренда. */
+:global([data-theme="pixel"]) .nav-foot__link { font-family: var(--font-pill); font-size: 10px; }
 </style>

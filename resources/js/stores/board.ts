@@ -46,6 +46,8 @@ export const useBoardStore = defineStore('board', () => {
   // Наполняется fetchBacklog (только в backed-режиме — в моке бэклога нет).
   const backlogCards = ref<Card[]>([])
   const boardId = ref<number | null>(null)
+  // id пары (shard) — нужен для подписки на presence-канал couple.{id} (см. useCoupleChannel).
+  const coupleId = ref<number | null>(null)
   const backed = ref(false) // true = данные из API; false = мок (нет авторизованной пары)
   // первичная загрузка доски: true до первого ответа fetchBoard. Пока true — Board.vue
   // показывает скелетон вместо мок-карточек (иначе на долю секунды мигает мок-доска).
@@ -126,6 +128,7 @@ export const useBoardStore = defineStore('board', () => {
         columns.value = board.columns.map(toColumn)
         if (board.members?.length) members.value = board.members.map((m) => ({ slot: m.slot, id: String(m.id), name: m.name ?? '', appearance: m.appearance ?? null }))
         boardId.value = board.id
+        coupleId.value = board.coupleId
         backed.value = true
         log.info('loaded from API', { boardId: board.id })
       } else {
@@ -362,13 +365,98 @@ export const useBoardStore = defineStore('board', () => {
     log.debug('persistColumnReorder')
   }
 
+  // ─── Real-time: применение событий партнёра (server-authoritative, БЕЗ вызовов API) ───
+  // Карточка приходит как CardData = ApiCard + position + onBoard. Размещение выводится
+  // из onBoard (доска/бэклог); action — только для логов/ленты активности.
+  type RemoteCard = ApiCard & { onBoard: boolean; position: number }
+
+  /** Убрать карточку по id отовсюду (из всех колонок и из бэклога) — основа реконсиляции. */
+  function removeCardEverywhere(cardId: string): void {
+    for (const col of columns.value) {
+      const i = col.cards.findIndex((c) => c.id === cardId)
+      if (i !== -1) col.cards.splice(i, 1)
+    }
+    const bi = backlogCards.value.findIndex((c) => c.id === cardId)
+    if (bi !== -1) backlogCards.value.splice(bi, 1)
+  }
+
+  /**
+   * Применить карточку из realtime-события: снять текущую копию и положить туда, где она
+   * теперь по payload (onBoard → колонка columnId на position; иначе → верх бэклога).
+   * Покрывает created/backlogCreated/updated/moved/returned и «убрать с доски» (updated+onBoard=false).
+   * Десинхрон (колонка неизвестна) → тихий refetch.
+   */
+  function applyRemoteCard(action: string, remote: RemoteCard): void {
+    const card = toCard(remote)
+    removeCardEverywhere(card.id)
+    if (remote.onBoard) {
+      const target = columns.value.find((c) => c.id === String(remote.columnId))
+      if (!target) {
+        log.warn('applyRemoteCard desync → refetch', { action, columnId: remote.columnId })
+        void fetchBoard()
+        return
+      }
+      const at = Math.max(0, Math.min(remote.position, target.cards.length))
+      target.cards.splice(at, 0, card)
+    } else {
+      backlogCards.value.unshift(card)
+    }
+    log.debug('applyRemoteCard', { action, cardId: card.id, onBoard: remote.onBoard })
+  }
+
+  /** Удаление карточки партнёром (DELETE) — снять из доски/бэклога и закрыть панель, если открыта. */
+  function applyRemoteCardRemoved(cardId: number): void {
+    const id = String(cardId)
+    removeCardEverywhere(id)
+    if (selectedCardId.value === id) selectedCardId.value = null
+    log.debug('applyRemoteCardRemoved', { cardId })
+  }
+
+  /** Колонка создана/переименована партнёром. */
+  function applyRemoteColumn(action: 'created' | 'updated', remote: ApiColumn): void {
+    const existing = columns.value.find((c) => c.id === String(remote.id))
+    if (existing) {
+      existing.title = remote.title
+      existing.isTerminal = remote.isTerminal
+    } else if (action === 'created') {
+      insertBeforeTerminal(toColumn(remote))
+    } else {
+      log.warn('applyRemoteColumn desync → refetch', { action, columnId: remote.id })
+      void fetchBoard()
+    }
+    log.debug('applyRemoteColumn', { action, columnId: remote.id })
+  }
+
+  /** Новый порядок колонок партнёра. Неизвестные локальные колонки не теряем (в хвост). */
+  function applyRemoteColumnsReordered(orderedIds: number[]): void {
+    const byId = new Map(columns.value.map((c) => [c.id, c]))
+    const next: Column[] = []
+    for (const id of orderedIds) {
+      const col = byId.get(String(id))
+      if (col) {
+        next.push(col)
+        byId.delete(String(id))
+      }
+    }
+    for (const leftover of byId.values()) next.push(leftover)
+    columns.value = next
+    log.debug('applyRemoteColumnsReordered', { count: orderedIds.length })
+  }
+
+  /** Колонка удалена партнёром (её карточки уходят каскадом — просто отбрасываем колонку). */
+  function applyRemoteColumnRemoved(columnId: number): void {
+    columns.value = columns.value.filter((c) => c.id !== String(columnId))
+    log.debug('applyRemoteColumnRemoved', { columnId })
+  }
+
   return {
-    columns, members, setMemberAppearance, backlogCards, boardId, backed, loading, dragging, totalCards, findCard,
+    columns, members, setMemberAppearance, backlogCards, boardId, coupleId, backed, loading, dragging, totalCards, findCard,
     selectedCardId, selectedCard, openCard, closeCard,
     justClosedCardId,
     filterAssignee, filterDeadline, cardMatchesFilter,
     fetchBoard, addCard, updateCard, removeCard, persistCardMove, moveCardToEdge, removeFromBoard,
     fetchBacklog, addBacklogCard, returnToBoard, removeFromBacklog,
     addColumn, renameColumn, removeColumn, persistColumnReorder,
+    applyRemoteCard, applyRemoteCardRemoved, applyRemoteColumn, applyRemoteColumnsReordered, applyRemoteColumnRemoved,
   }
 })

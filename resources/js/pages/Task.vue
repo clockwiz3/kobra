@@ -39,7 +39,7 @@ const status = computed<{ label: string; tone: 'accent' | 'neutral' } | null>(()
 
 <template>
   <section class="task-page">
-    <RouterLink :to="{ name: 'dashboard' }" class="task-page__back">← к доске</RouterLink>
+    <RouterLink :to="{ name: 'board' }" class="task-page__back">← к доске</RouterLink>
 
     <!-- Загрузка -->
     <BaseCard v-if="loading"><p class="task-page__muted">Загрузка задачи…</p></BaseCard>

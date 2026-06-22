@@ -13,6 +13,7 @@ async function mountShell() {
     // Все роуты-разделы нужны, чтобы RouterLink внутри NavMenu разрешался.
     routes: [
       { path: '/', name: 'dashboard', component: Blank },
+      { path: '/board', name: 'board', component: Blank },
       { path: '/backlog', name: 'backlog', component: Blank },
       { path: '/wishlists', name: 'wishlists', component: Blank },
       { path: '/gantt', name: 'gantt', component: Blank },

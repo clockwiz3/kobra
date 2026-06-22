@@ -3,6 +3,7 @@
 
 import type { UserAppearance } from '@/types/board'
 import { useLogger } from '@/composables/useLogger'
+import { socketId } from '@/bootstrap'
 
 const log = useLogger('authApi')
 const TOKEN_KEY = 'cuploid.token'
@@ -28,7 +29,12 @@ export function getToken(): string | null {
 
 function authHeaders(): HeadersInit {
   const token = getToken()
-  return { ...JSON_HEADERS, ...(token ? { Authorization: `Bearer ${token}` } : {}) }
+  const sid = socketId() // X-Socket-ID → broadcast()->toOthers() не вернёт событие инициатору
+  return {
+    ...JSON_HEADERS,
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    ...(sid ? { 'X-Socket-Id': sid } : {}),
+  }
 }
 
 /** Логин. При успехе кладёт токен в localStorage и возвращает сессию; иначе null. */

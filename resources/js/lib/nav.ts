@@ -3,7 +3,7 @@
 // плюс @vicons/fluent для Ганта (в Tabler нет литерального Gantt).
 // Модуль НЕ reactive → markRaw для компонентов не нужен.
 import type { Component } from 'vue'
-import { LayoutKanban, Heart, Calendar, ListDetails } from '@vicons/tabler'
+import { Dashboard, LayoutKanban, Heart, Calendar, ListDetails } from '@vicons/tabler'
 import { GanttChart24Regular } from '@vicons/fluent'
 
 export interface NavItem {
@@ -18,7 +18,8 @@ export interface NavItem {
 }
 
 export const navItems: NavItem[] = [
-  { key: 'board', label: 'Доска', routeName: 'dashboard', icon: LayoutKanban },
+  { key: 'home', label: 'Главная', routeName: 'dashboard', icon: Dashboard },
+  { key: 'board', label: 'Доска', routeName: 'board', icon: LayoutKanban },
   { key: 'backlog', label: 'Задачи', routeName: 'backlog', icon: ListDetails },
   { key: 'wishlists', label: 'Вишлисты', routeName: 'wishlists', icon: Heart },
   { key: 'gantt', label: 'Гант', routeName: 'gantt', icon: GanttChart24Regular },

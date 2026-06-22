@@ -63,20 +63,20 @@ Presence (`here`/`joining`/`leaving`) → онлайн-статус партнё
 4. [x] **Диспатч из сервисов** — `CardService`/`BoardService`/`ProfileService`: `broadcast(...)->toOthers()` в точках мутаций; `couple_id` из модели (для профиля — резолв через `couple_user`). Добавлено: `CardData.onBoard` (реконсиляция локации), `CardService::delete()`, `moveCore()` (без двойного 'moved' при возврате), `BoardService` инжектит `CoupleContext`. Все 55 feature-тестов зелёные. *(blocked by 3)*
 
 ### Фаза 2 — Echo + применение на фронте
-5. **Echo-бутстрап + `X-Socket-ID`** — `resources/js/bootstrap.ts` (Reverb + кастомный Bearer-authorizer на `/broadcasting/auth`), init в `main.ts`; добавить `X-Socket-ID` в `authHeaders()` всех fetch-модулей. *(blocked by 1)*
-6. **board store: apply-методы** — `applyRemoteCard/CardRemoved/Column/ColumnsReordered/ColumnRemoved` (reuse мутаций, без API), фолбэк refetch при desync.
-7. **`useCoupleChannel`** — `Echo.join('couple.'+id)`, presence→`partnerOnline`, `.listen` доменных событий→`board.applyRemote*`; subscribe после `fetchBoard`, unsubscribe при logout. *(blocked by 2, 5, 6)*
+5. [x] **Echo-бутстрап + `X-Socket-ID`** — `resources/js/bootstrap.ts` (Reverb + кастомный Bearer-authorizer на `/broadcasting/auth`), init в `main.ts` (после restore), teardown в `auth.logout`; `X-Socket-Id` в headers `api/auth.ts`/`api/board.ts`/`api/profile.ts`; типы `VITE_REVERB_*` в `vite-env.d.ts`. vue-tsc чист, Vitest 183.
+6. [x] **board store: apply-методы** — `applyRemoteCard/CardRemoved/Column/ColumnsReordered/ColumnRemoved` (reuse мутаций, без API), реконсиляция локации по `onBoard`, фолбэк refetch при desync. vue-tsc чист, store-тесты 31.
+7. [x] **`useCoupleChannel`** — `Echo.join('couple.'+id)`, presence→`partnerOnline`, `.listen` доменных событий→`board.applyRemote*`; подписка из `AppShell` по `board.coupleId` (watch), unsubscribe на unmount. Добавлено: `BoardData.coupleId`/`ApiBoard.coupleId`/`store.coupleId`. *(blocked by 2, 5, 6)*
 
 ### Фаза 3 — Presence
-8. **Индикатор «партнёр в сети»** — из `useCoupleChannel.partnerOnline`, в шапке `AppShell` и на дашборде. *(blocked by 7)*
+8. [x] **Индикатор «партнёр в сети»** — `PresenceDot.vue` (ui), в шапке `AppShell` (показ при наличии партнёра) из `partnerOnline`; переиспользуется на дашборде. *(blocked by 7)*
 
 ### Фаза 4 — Раздел «Дашборд»
-9. **Рефактор роутов** — Дашборд `pages/Home.vue` на `/` (name `dashboard`), доска → `/board` (name `board`); правка `lib/nav.ts` (+ пункт «Главная»).
-10. **`Home.vue`** — приветствие пары, плитки-счётчики (`totalCards`/колонки/бэклог), индикатор онлайн, live-лента, быстрые ссылки, плейсхолдеры геймификации; skeleton/empty. *(blocked by 8, 9, 11)*
-11. **Буфер ленты активности** — ring-buffer последних realtime-событий → человекочитаемый ru-текст для ленты дашборда. *(blocked by 7)*
+9. [x] **Рефактор роутов** — Дашборд `pages/Home.vue` на `/` (name `dashboard`), доска → `/board` (name `board`); `lib/nav.ts` (+ пункт «Главная», иконка `Dashboard`); back-link `Task.vue` → `board`; обновлены stub-роутеры тестов.
+10. [x] **`Home.vue`** — приветствие пары, плитки-счётчики (`totalCards`/колонки/бэклог), `PresenceDot`, live-лента `recentEvents`, быстрые ссылки (board/backlog/profile), плейсхолдеры геймификации; skeleton по `loading`. *(blocked by 8, 9, 11)*
+11. [x] **Буфер ленты активности** — `recentEvents` ring-buffer (кап 30) в `useCoupleChannel`, ru-текст по событию с именем партнёра; сброс на unsubscribe. *(blocked by 7)*
 
 ### Фаза 5 — Правило
-12. **Правило реактивности** — раздел «Realtime / Реактивность» в `.ai-factory/rules/base.md` + апдейт real-time-секции `ARCHITECTURE.md` (с «(позже)» на «реализовано»). *(blocked by 4; владелец rules — `/aif-rules`, правим по явному запросу)*
+12. [x] **Правило реактивности** — раздел «Realtime / Реактивность» в `.ai-factory/rules/base.md` + апдейт real-time-секции `ARCHITECTURE.md` (с «(позже)» на «реализовано»). *(blocked by 4; владелец rules — `/aif-rules`, правим по явному запросу)*
 
 ### Фаза 6 — Тесты
 13. **Pest** — авторизация канала (член/чужой/**изоляция двух пар**) + `Event::fake` диспатч на корректный `PresenceChannel` с DTO; профиль вне контекста. *(blocked by 2, 4)*

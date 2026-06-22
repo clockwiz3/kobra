@@ -5,17 +5,33 @@
  * Переключатель темы живёт в подвале меню (NavMenu), а не в топбаре.
  * Каркас держит ровно высоту вьюпорта; вертикальный скролл — внутри страницы-ребёнка.
  */
-import { ref } from 'vue'
+import { ref, watch, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
 import { Menu2, Bell, Logout } from '@vicons/tabler'
 import BrandMark from '@/components/ui/BrandMark.vue'
+import PresenceDot from '@/components/ui/PresenceDot.vue'
 import NavMenu from '@/components/layout/NavMenu.vue'
 import { useAuthStore } from '@/stores/auth'
+import { useBoardStore } from '@/stores/board'
+import { useCoupleChannel } from '@/composables/useCoupleChannel'
 import { useLogger } from '@/composables/useLogger'
 
 const auth = useAuthStore()
+const board = useBoardStore()
 const router = useRouter()
 const log = useLogger('AppShell')
+
+// Real-time: как только известен couple_id (после первого fetchBoard) — подписка на
+// presence-канал пары. Отписка при размонтировании каркаса (выход из авторизованной зоны).
+const { subscribe, unsubscribe, partnerOnline } = useCoupleChannel()
+watch(
+  () => board.coupleId,
+  (id) => {
+    if (id !== null) subscribe(id)
+  },
+  { immediate: true },
+)
+onBeforeUnmount(() => unsubscribe())
 
 const navOpen = ref(false)
 
@@ -55,6 +71,7 @@ async function logout(): Promise<void> {
         </div>
 
         <div class="topbar__right">
+          <PresenceDot v-if="board.members.length > 1" class="topbar__presence" :online="partnerOnline" />
           <button type="button" class="icon-btn" aria-label="Уведомления" @click="onNotifications">
             <Bell />
           </button>

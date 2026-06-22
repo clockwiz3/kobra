@@ -36,6 +36,9 @@ export { default as BaseTimePicker } from './BaseTimePicker.vue'
 export { default as BaseColorPicker } from './BaseColorPicker.vue'
 export { default as ColorSpectrum } from './ColorSpectrum.vue'
 
+// — Статус / присутствие —
+export { default as PresenceDot } from './PresenceDot.vue'
+
 // — Брендинг / темизация —
 export { default as BrandMark } from './BrandMark.vue'
 export { default as ThemeSwitch } from './ThemeSwitch.vue'

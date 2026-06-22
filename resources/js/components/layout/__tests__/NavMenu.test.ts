@@ -12,6 +12,7 @@ function makeRouter(): Router {
     history: createMemoryHistory(),
     routes: [
       { path: '/', name: 'dashboard', component: Blank },
+      { path: '/board', name: 'board', component: Blank },
       { path: '/backlog', name: 'backlog', component: Blank },
       { path: '/wishlists', name: 'wishlists', component: Blank },
       { path: '/gantt', name: 'gantt', component: Blank },

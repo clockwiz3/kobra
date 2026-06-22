@@ -59,7 +59,7 @@ tests/Feature/Tenancy/           # leak-harness (acceptance-гейт изоля�
 - **Синхронно:** Controller → Service (внутри запроса). Сервис принимает **явный** `Couple`/`couple_id`, не читает tenant из ambient-состояния для решения «что вернуть».
 - **Асинхронно:** доменные события → Jobs (очередь). Каждая tenant-aware джоба получает `couple_id` в конструкторе, биндит/чистит `CoupleContext` в try/finally; `Queue::before` забывает stale-контекст между джобами.
 - **Уведомления:** доменные события кладут запись в outbox (`notifications`), воркер доставляет по каналам (email/telegram).
-- **Real-time (позже):** Reverb, приватные каналы `couple.{coupleId}`, авторизация по членству в паре.
+- **Real-time (реализовано):** Reverb + Laravel Echo, **presence-канал `couple.{coupleId}`** (единый: доменные события + онлайн-присутствие), fail-closed авторизация по членству в паре. Доменные события (`app/Events/*`, `ShouldBroadcastNow`, DTO-payload) вещаются из сервисов через `broadcast()->toOthers()`; фронт применяет точечной мутацией стора. Конвенция «реактивность по умолчанию» — `rules/base.md`.
 
 ## Key Principles
 

@@ -3,6 +3,7 @@
 
 import type { AssigneeSlot, CardAssignee, CardPatch, CardPriority, UserAppearance } from '@/types/board'
 import { useLogger } from '@/composables/useLogger'
+import { socketId } from '@/bootstrap'
 
 const log = useLogger('boardApi')
 
@@ -50,6 +51,7 @@ export interface ApiBoardMember {
 
 export interface ApiBoard {
   id: number
+  coupleId: number // id пары → presence-канал couple.{id}
   name: string
   columns: ApiColumn[]
   members: ApiBoardMember[]
@@ -59,10 +61,12 @@ const BASE = '/api/couple'
 
 function headers(): HeadersInit {
   const token = localStorage.getItem('cuploid.token')
+  const sid = socketId() // X-Socket-ID → мутация не вернётся инициатору через broadcast()->toOthers()
   return {
     Accept: 'application/json',
     'Content-Type': 'application/json',
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    ...(sid ? { 'X-Socket-Id': sid } : {}),
   }
 }
 

@@ -25,7 +25,7 @@ const apiCard = (id: number, columnId: number, title: string): ApiCard => ({
   priority: 'normal', dueAt: null, dueEndAt: null, dueTime: null, done: false, position: 0,
 })
 
-const boardWith = (columns: ApiBoard['columns']): ApiBoard => ({ id: 1, name: 'Доска', columns })
+const boardWith = (columns: ApiBoard['columns']): ApiBoard => ({ id: 1, coupleId: 1, name: 'Доска', columns, members: [] })
 const ideasBoard = boardWith([{ id: 1, title: 'Идеи', position: 0, isTerminal: false, cards: [] }])
 
 async function mountBacklog(backlog: ApiCard[], board: ApiBoard = ideasBoard) {

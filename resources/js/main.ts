@@ -4,6 +4,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import '../css/app.css'
 import { useTheme } from './composables/useTheme'
 import { useAuthStore } from './stores/auth'
+import { initEcho } from './bootstrap'
 import App from './App.vue'
 import AppShell from './components/layout/AppShell.vue'
 
@@ -17,8 +18,10 @@ const router = createRouter({
       component: AppShell,
       meta: { requiresAuth: true },
       children: [
-        // Главная = дашборд пары (канбан с карточками). /board — алиас.
-        { path: '', name: 'dashboard', alias: '/board', component: () => import('./pages/Board.vue') },
+        // Главная = дашборд-сводка пары (счётчики, live-лента, онлайн-статус).
+        { path: '', name: 'dashboard', component: () => import('./pages/Home.vue') },
+        // Доска (канбан с карточками) переехала на /board.
+        { path: 'board', name: 'board', component: () => import('./pages/Board.vue') },
         { path: 'backlog', name: 'backlog', component: () => import('./pages/Backlog.vue') },
         // Отдельная страница задачи (шарится ссылкой) — дублёр панели параметров + статус.
         { path: 'task/:id', name: 'task', component: () => import('./pages/Task.vue') },
@@ -47,6 +50,9 @@ const auth = useAuthStore(pinia)
 // Гейт авторизации: восстановить сессию (идемпотентно) и развести гостя/юзера.
 router.beforeEach(async (to) => {
   await auth.restore()
+  // Поднять Echo сразу после восстановления сессии (идемпотентно) — подписку на
+  // couple-канал делает useCoupleChannel при загрузке доски.
+  if (auth.isAuthenticated) initEcho()
   if (to.meta.requiresAuth && !auth.isAuthenticated) {
     return { name: 'login', query: to.fullPath !== '/' ? { redirect: to.fullPath } : undefined }
   }

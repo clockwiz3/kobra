@@ -5,6 +5,7 @@
 import type { UserAppearance } from '@/types/board'
 import type { AuthUser } from '@/api/auth'
 import { useLogger } from '@/composables/useLogger'
+import { socketId } from '@/bootstrap'
 
 const log = useLogger('profileApi')
 const TOKEN_KEY = 'cuploid.token'
@@ -13,7 +14,12 @@ const JSON_HEADERS = { 'Content-Type': 'application/json', Accept: 'application/
 
 function authHeaders(): HeadersInit {
   const token = localStorage.getItem(TOKEN_KEY)
-  return { ...JSON_HEADERS, ...(token ? { Authorization: `Bearer ${token}` } : {}) }
+  const sid = socketId() // X-Socket-ID → апдейт профиля не вернётся инициатору
+  return {
+    ...JSON_HEADERS,
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    ...(sid ? { 'X-Socket-Id': sid } : {}),
+  }
 }
 
 export interface ProfilePatch {

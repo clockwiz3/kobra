@@ -30,6 +30,7 @@ async function mountTask(opts: { board: ApiBoard; backlog?: ApiCard[]; id: strin
     history: createMemoryHistory(),
     routes: [
       { path: '/', name: 'dashboard', component: Blank },
+      { path: '/board', name: 'board', component: Blank },
       { path: '/task/:id', name: 'task', component: Task },
     ],
   })
@@ -44,7 +45,7 @@ async function mountTask(opts: { board: ApiBoard; backlog?: ApiCard[]; id: strin
 }
 
 const boardWithCard = (card: ApiCard, isTerminal = false): ApiBoard => ({
-  id: 1, name: 'Доска',
+  id: 1, coupleId: 1, name: 'Доска', members: [],
   columns: [{ id: card.columnId, title: 'Идеи', position: 0, isTerminal, cards: [card] }],
 })
 
@@ -64,13 +65,13 @@ describe('Task.vue', () => {
   })
 
   it('карточка в бэклоге → статус «В бэклоге»', async () => {
-    const emptyBoard: ApiBoard = { id: 1, name: 'Доска', columns: [{ id: 1, title: 'Идеи', position: 0, isTerminal: false, cards: [] }] }
+    const emptyBoard: ApiBoard = { id: 1, coupleId: 1, name: 'Доска', members: [], columns: [{ id: 1, title: 'Идеи', position: 0, isTerminal: false, cards: [] }] }
     const { w } = await mountTask({ board: emptyBoard, backlog: [apiCard(9, 1, 'Из бэклога')], id: '9' })
     expect(w.find('.task-page__status').text()).toContain('В бэклоге')
   })
 
   it('нет такой карточки → сообщение «не найдена»', async () => {
-    const emptyBoard: ApiBoard = { id: 1, name: 'Доска', columns: [] }
+    const emptyBoard: ApiBoard = { id: 1, coupleId: 1, name: 'Доска', members: [], columns: [] }
     const { w } = await mountTask({ board: emptyBoard, id: '777' })
     expect(w.text()).toContain('не найдена')
   })

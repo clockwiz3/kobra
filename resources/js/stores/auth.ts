@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { login as apiLogin, logout as apiLogout, me as apiMe, getToken, type AuthUser } from '@/api/auth'
+import { teardownEcho } from '@/bootstrap'
 import { useLogger } from '@/composables/useLogger'
 
 const log = useLogger('authStore')
@@ -25,6 +26,7 @@ export const useAuthStore = defineStore('auth', () => {
 
   async function logout(): Promise<void> {
     await apiLogout()
+    teardownEcho() // разорвать real-time соединение пары
     user.value = null
     token.value = null
     log.info('logout')

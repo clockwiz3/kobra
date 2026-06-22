@@ -10,6 +10,7 @@ class BoardData extends Data
 {
     public function __construct(
         public int $id,
+        public int $coupleId, // id shard'а пары → presence-канал couple.{id} (≠ board id)
         public string $name,
         /** @var ColumnData[] */
         public array $columns,
@@ -22,6 +23,7 @@ class BoardData extends Data
     {
         return new self(
             id: $board->id,
+            coupleId: $board->couple_id,
             name: $board->name,
             columns: $board->columns->map(fn ($col) => ColumnData::fromModel($col))->all(),
             members: self::membersFor($board),

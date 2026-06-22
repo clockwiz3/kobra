@@ -2,8 +2,13 @@
 
 namespace App\Services\Kanban;
 
+use App\Data\ColumnData;
+use App\Events\ColumnBroadcast;
+use App\Events\ColumnRemoved;
+use App\Events\ColumnsReordered;
 use App\Models\Board;
 use App\Models\BoardColumn;
+use App\Support\CoupleContext;
 use Illuminate\Support\Facades\Log;
 
 /**
@@ -11,6 +16,8 @@ use Illuminate\Support\Facades\Log;
  */
 class BoardService
 {
+    public function __construct(private readonly CoupleContext $context) {}
+
     /** Дефолтная доска пары + стартовые колонки (идемпотентно). */
     public function ensureDefaultBoard(): Board
     {
@@ -55,6 +62,8 @@ class BoardService
         ]);
         Log::info('[BoardService.addColumn]', ['board_id' => $board->id, 'column_id' => $column->id, 'position' => $position]);
 
+        broadcast(new ColumnBroadcast($board->couple_id, 'created', ColumnData::fromModel($column->load('cards'))))->toOthers();
+
         return $column;
     }
 
@@ -62,6 +71,8 @@ class BoardService
     {
         $column->update(['title' => $title]);
         Log::debug('[BoardService.renameColumn]', ['column_id' => $column->id]);
+
+        broadcast(new ColumnBroadcast($column->couple_id, 'updated', ColumnData::fromModel($column->fresh()->load('cards'))))->toOthers();
     }
 
     /**
@@ -82,6 +93,9 @@ class BoardService
             BoardColumn::whereKey($id)->update(['position' => $i]); // scoped: только колонки текущей пары
         }
         Log::debug('[BoardService.reorderColumns]', ['count' => count($orderedIds), 'terminal_pinned' => $terminalId !== null]);
+
+        // Вещаем ИТОГОВЫЙ порядок (после пиннинга терминальной) — партнёр пересортирует свои колонки.
+        broadcast(new ColumnsReordered($this->context->id(), array_map('intval', $orderedIds)))->toOthers();
     }
 
     public function removeColumn(BoardColumn $column): void
@@ -92,7 +106,12 @@ class BoardService
             abort(422, 'Колонку «Готово» нельзя удалить.');
         }
 
+        $coupleId = $column->couple_id;
+        $columnId = $column->id;
+
         $column->delete(); // карточки удалятся каскадом (board_column_id FK CASCADE)
-        Log::info('[BoardService.removeColumn]', ['column_id' => $column->id]);
+        Log::info('[BoardService.removeColumn]', ['column_id' => $columnId]);
+
+        broadcast(new ColumnRemoved($coupleId, $columnId))->toOthers();
     }
 }

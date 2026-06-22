@@ -83,7 +83,7 @@ class CardController extends CoupleController
 
     public function destroy(int $cardId): Response
     {
-        Card::findOrFail($cardId)->delete();
+        $this->cards->delete(Card::findOrFail($cardId)); // scoped; вещает CardRemoved партнёру
 
         return response()->noContent();
     }

@@ -12,6 +12,12 @@ return Application::configure(basePath: dirname(__DIR__))
         commands: __DIR__.'/../routes/console.php',
         health: '/up',
     )
+    // Канал-роуты + /broadcasting/auth под токен-гвардом Sanctum (SPA шлёт Bearer,
+    // не сессию) — presence-канал couple.{id} авторизуется по членству в паре.
+    ->withBroadcasting(
+        __DIR__.'/../routes/channels.php',
+        attributes: ['middleware' => ['auth:sanctum']],
+    )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
             'couple.context' => \App\Http\Middleware\ResolveCoupleContext::class,

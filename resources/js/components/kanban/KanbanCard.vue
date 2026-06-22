@@ -6,6 +6,8 @@ import type { Card, CardPriority } from '@/types/board'
 import { useBoardStore } from '@/stores/board'
 import { BaseChip } from '@/components/ui'
 import { formatRange, isOverdue } from '@/lib/date'
+import { useAssignees } from '@/composables/useAssignees'
+import { useCardFrame } from '@/composables/useCardFrame'
 import { useLogger } from '@/composables/useLogger'
 
 // Завершение задачи теперь — перенос в терминальную колонку «Готово» (не галочка).
@@ -17,17 +19,18 @@ import { useLogger } from '@/composables/useLogger'
 const props = defineProps<{ card: Card }>()
 const emit = defineEmits<{ remove: []; open: [] }>()
 const store = useBoardStore()
+const { assigneeLabel } = useAssignees()
+const { renderForAssignee } = useCardFrame()
 const log = useLogger('KanbanCard')
+
+// Рамка карточки по исполнителю (appearance участника). surface=--surface-2 = фон .task.
+const frame = computed(() => renderForAssignee(props.card.assignee, 'var(--surface-2)'))
 
 // Ретро-анимация закрытия (pixel): .just-closed выводится из стора (а не из локального состояния),
 // поэтому переживает пересоздание инстанса карточки при cross-column DnD. store.justClosedCardId
 // выставляется при переносе в терминал (done false→true) и сам гаснет через ~700мс → на загрузке/
 // перерисовке уже-закрытых карточек анимация не играет.
 const isJustClosed = computed(() => store.justClosedCardId === props.card.id)
-
-const assigneeLabel = computed(() => {
-  return { him: 'Он', her: 'Она', together: '♥ Вместе' }[props.card.assignee]
-})
 
 // дедлайн: одиночная дата или диапазон (ru), пусто — если не задан
 const dueLabel = computed(() => formatRange(props.card.dueAt, props.card.dueEndAt))
@@ -107,7 +110,8 @@ function openCard() {
 <template>
   <div
     class="task"
-    :class="{ done: card.done, 'just-closed': isJustClosed }"
+    :class="[{ done: card.done, 'just-closed': isJustClosed }, frame.class]"
+    :style="frame.style"
     :data-assignee="card.assignee"
     :data-has-due="hasDue || null"
     :data-overdue="overdue || null"
@@ -144,7 +148,7 @@ function openCard() {
       </div>
       <!-- Все чипы — единая геометрия (.chip), различаются только содержимым и цветом/фоном (tone). -->
       <div class="tm">
-        <BaseChip :tone="card.assignee === 'together' ? 'accent' : 'neutral'">{{ assigneeLabel }}</BaseChip>
+        <BaseChip :tone="card.assignee === 'together' ? 'accent' : 'neutral'">{{ assigneeLabel(card.assignee) }}</BaseChip>
         <BaseChip v-for="l in card.labels" :key="l" tone="neutral">{{ l }}</BaseChip>
         <BaseChip v-if="deadlineChip" :tone="deadlineChip.tone">{{ deadlineChip.text }}</BaseChip>
       </div>

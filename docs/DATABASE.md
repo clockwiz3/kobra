@@ -58,10 +58,26 @@ erDiagram
 | locale | string nullable | default ru |
 | telegram_id | bigint UNIQUE nullable | привязка Telegram |
 | telegram_username | string nullable | |
-| settings | json nullable | |
+| settings | json nullable | per-user настройки; ключ `appearance` — «внешний вид» в задачах (см. ниже) |
 | timestamps, deleted_at (soft) | | |
 
 Трейты: `HasApiTokens` (Sanctum), `Notifiable`. `couple_user.user_id` → CASCADE (удаление юзера чистит пивоты; уничтожение шарда — через `CoupleDeletionService`).
+
+**`settings.appearance` (per-user, без миграции — живёт в json `settings`).** Персональный вид карточек на доске; рамка применяется **по исполнителю** (карточка him/her берёт рамку соответствующего аккаунта; `together` — смешанная). Редактируется на странице «Профиль» (`PATCH /api/user`), отдаётся фронту двумя путями: текущему юзеру в `UserData` (`GET /api/user`) и по исполнителю — в `board.members[].appearance` (`GET /api/couple/board`, см. `BoardMemberData`).
+
+```jsonc
+"appearance": {
+  "card": {
+    "paint": { "kind": "solid", "color": "#e84aa6" },
+    //  либо: { "kind": "gradient", "from": "#5b8cff", "to": "#9b6bff", "angle": 135 }
+    "style": "dashed",    // solid | dashed | dotted
+    "width": 2,            // 1..3
+    "animated": false      // «мерцание»: заливка (сплошная ИЛИ градиент) превращается в бегущий блик
+  }
+}
+```
+
+> Ограничение рендера: градиентная (и мерцающая) рамка рисуется CSS-трюком `border-box` и не пунктируется — для `dashed`/`dotted` без мерцания фронт откатывается на сплошной `border-color = paint.from`; при `animated:true` стиль всегда сплошной (см. `composables/useCardFrame.ts`).
 
 ### couples — SHARD ROOT, НЕ scoped
 | Столбец | Тип | Заметки |
@@ -213,7 +229,9 @@ erDiagram
 ## DOCUMENT-ONLY (будущие фичи — couple-scoped, не мигрируем сейчас)
 
 ### Kanban (✅ МИГРИРОВАНО, milestone Kanban)
-- `boards`(couple_id, name, position), `board_columns`(couple_id, board_id, title, position, **is_terminal** _(терминальная «Готово»-колонка; ровно одна на доску — partial unique index `board_columns_one_terminal_per_board`; удалять нельзя → 422)_), `cards`(couple_id, board_column_id, title, description, **assignee enum** him/her/together, due_at, **due_end_at** _(конец диапазона дедлайна; null = одиночная дата, due_at = начало/single)_, **done/completed_at** _(выводятся из попадания карточки в терминальную колонку: перенос в «Готово» закрывает задачу + событие `task_completed` идемпотентно по `card_done_<id>`, вынос обратно — возвращает в работу без отрицательных начислений; отдельной галочки нет)_, position), `labels`(couple_id, name, color), `card_label`(couple_id, card_id, label_id, unique). Все couple-scoped (CASCADE). `card_comments` — отложено. Real-time через Reverb `couple.{id}`.
+- `boards`(couple_id, name, position), `board_columns`(couple_id, board_id, title, position, **is_terminal** _(терминальная «Готово»-колонка; ровно одна на доску — partial unique index `board_columns_one_terminal_per_board`; удалять нельзя → 422)_), `cards`(couple_id, board_column_id, title, description, **assignee enum** him/her/together, due_at, **due_end_at** _(конец диапазона дедлайна; null = одиночная дата, due_at = начало/single)_, **done/completed_at** _(выводятся из попадания карточки в терминальную колонку: перенос в «Готово» закрывает задачу + событие `task_completed` идемпотентно по `card_done_<id>`, вынос обратно — возвращает в работу без отрицательных начислений; отдельной галочки нет)_, **on_board** _(true = на доске; false = «бэклог»/раздел «Задачи»: карточка убрана с доски ИЛИ создана сразу в бэклоге — НЕ удаление, остаётся в БД с сохранённой колонкой-домом; `board_column_id` всё ещё указывает на колонку. Индекс `(board_column_id, on_board, position)`; `board_columns.cards()` фильтрует `on_board=true`)_, position), `labels`(couple_id, name, color), `card_label`(couple_id, card_id, label_id, unique). Все couple-scoped (CASCADE). `card_comments` — отложено. Real-time через Reverb `couple.{id}`.
+
+> **Бэклог (раздел «Задачи»).** `on_board=false` — карточки вне доски: убранные с неё (`PATCH /api/couple/cards/{id}` с `on_board:false`) или созданные сразу там (`POST /api/couple/backlog`). Список — `GET /api/couple/backlog`. Возврат на доске — `PATCH /api/couple/cards/{id}/return` с `column_id` (в конец выбранной колонки; done пересчитывается по терминальности). Удаление навсегда — обычный `DELETE /api/couple/cards/{id}`.
 
 ### Wishlists (milestone Wishlists)
 - `wishlists`(couple_id), `wishlist_items`(wishlist_id, title, url, price), `item_reservations`(item_id, reserved_by_user_id) — «скрытая бронь»: видна резервирующему, скрыта от партнёра.

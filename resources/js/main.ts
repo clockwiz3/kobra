@@ -20,9 +20,12 @@ const router = createRouter({
         // Главная = дашборд пары (канбан с карточками). /board — алиас.
         { path: '', name: 'dashboard', alias: '/board', component: () => import('./pages/Board.vue') },
         { path: 'backlog', name: 'backlog', component: () => import('./pages/Backlog.vue') },
+        // Отдельная страница задачи (шарится ссылкой) — дублёр панели параметров + статус.
+        { path: 'task/:id', name: 'task', component: () => import('./pages/Task.vue') },
         { path: 'wishlists', name: 'wishlists', component: () => import('./pages/Wishlists.vue') },
         { path: 'gantt', name: 'gantt', component: () => import('./pages/Gantt.vue') },
         { path: 'calendar', name: 'calendar', component: () => import('./pages/Calendar.vue') },
+        { path: 'profile', name: 'profile', component: () => import('./pages/Profile.vue') },
       ],
     },
     // Вне каркаса (без меню): вход и подтверждение вайтлиста.

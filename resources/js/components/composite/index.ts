@@ -5,3 +5,4 @@
  *   import { CardDetailDrawer } from '@/components/composite'
  */
 export { default as CardDetailDrawer } from './CardDetailDrawer.vue'
+export { default as CardDetailForm } from './CardDetailForm.vue'

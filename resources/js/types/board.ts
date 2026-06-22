@@ -7,6 +7,40 @@ export const CARD_TITLE_MAX = 100
 
 export type CardAssignee = 'him' | 'her' | 'together'
 
+// Слот исполнителя, привязанный к реальному аккаунту пары (без 'together' — это «оба»).
+export type AssigneeSlot = 'him' | 'her'
+
+// — «Внешний вид» пользователя в задачах (appearance) — рамка карточки —
+export type BorderStyle = 'solid' | 'dashed' | 'dotted'
+
+// Заливка рамки: сплошной цвет либо 2-точечный градиент с углом.
+export type FramePaint =
+  | { kind: 'solid'; color: string }
+  | { kind: 'gradient'; from: string; to: string; angle: number }
+
+// Полное описание рамки карточки. animated — «мерцание»: заливка (сплошная ИЛИ градиент)
+// превращается в анимированный движущийся блик (см. useCardFrame).
+export interface CardFrame {
+  paint: FramePaint
+  style: BorderStyle
+  width: 1 | 2 | 3
+  animated: boolean
+}
+
+// Per-user appearance. Пока единственная грань — рамка карточки; структура расширяемая.
+export interface UserAppearance {
+  card: CardFrame
+}
+
+// Участник пары: слот ↔ имя аккаунта + его appearance. Источник имён исполнителей (вместо «Он/Она»)
+// и рамок карточек по исполнителю.
+export interface BoardMember {
+  slot: AssigneeSlot
+  id: string
+  name: string
+  appearance?: UserAppearance | null
+}
+
 export type CardPriority = 'low' | 'normal' | 'high' | 'critical'
 
 export interface Label {
@@ -17,6 +51,7 @@ export interface Label {
 
 export interface Card {
   id: string
+  columnId?: string // исходная/текущая колонка (нужна бэклогу: показ и дефолт возврата). На доске вложенность даёт её неявно.
   title: string
   description?: string
   assignee: CardAssignee

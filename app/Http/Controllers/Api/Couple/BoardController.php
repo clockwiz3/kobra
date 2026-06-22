@@ -16,7 +16,7 @@ class BoardController extends CoupleController
     public function show(): BoardData
     {
         $board = $this->boards->ensureDefaultBoard();
-        $board->load(['columns.cards']); // отсортированы по position в relations
+        $board->load(['columns.cards', 'couple.members']); // columns/cards — по position; members → слоты исполнителя
 
         return BoardData::fromModel($board);
     }

@@ -1,7 +1,7 @@
 // Typed-клиент couple-API канбана. Bearer-токен из localStorage (до появления полноценного auth).
 // При 401/403 функции возвращают null/false — store остаётся в мок-режиме.
 
-import type { CardAssignee, CardPatch, CardPriority } from '@/types/board'
+import type { AssigneeSlot, CardAssignee, CardPatch, CardPriority, UserAppearance } from '@/types/board'
 import { useLogger } from '@/composables/useLogger'
 
 const log = useLogger('boardApi')
@@ -41,10 +41,18 @@ export interface ApiColumn {
   cards: ApiCard[]
 }
 
+export interface ApiBoardMember {
+  slot: AssigneeSlot
+  id: number
+  name: string | null
+  appearance: UserAppearance | null
+}
+
 export interface ApiBoard {
   id: number
   name: string
   columns: ApiColumn[]
+  members: ApiBoardMember[]
 }
 
 const BASE = '/api/couple'
@@ -74,6 +82,20 @@ async function jsonOrNull<T>(res: Response): Promise<T | null> {
 export const boardApi = {
   async fetchBoard(): Promise<ApiBoard | null> {
     return jsonOrNull<ApiBoard>(await call('GET', '/board'))
+  },
+  /** Карточки бэклога (убранные с доски, on_board=false) текущей пары; свежие — сверху. */
+  async fetchBacklog(): Promise<ApiCard[] | null> {
+    return jsonOrNull<ApiCard[]>(await call('GET', '/backlog'))
+  },
+  /** Создать карточку сразу в бэклоге (on_board=false) — не появляется на доске. */
+  async createBacklogCard(title: string, assignee: CardAssignee): Promise<ApiCard | null> {
+    return jsonOrNull<ApiCard>(await call('POST', '/backlog', { title, assignee }))
+  },
+  /** Вернуть карточку из бэклога на доску в конец колонки columnId (on_board=false → true). */
+  async returnToBoard(cardId: number, columnId: number): Promise<ApiCard | null> {
+    const res = await call('PATCH', `/cards/${cardId}/return`, { column_id: columnId })
+    if (!res.ok) log.warn('[boardApi.returnToBoard] failed', { cardId, status: res.status })
+    return jsonOrNull<ApiCard>(res)
   },
   async createCard(columnId: number, title: string, assignee: CardAssignee): Promise<ApiCard | null> {
     return jsonOrNull<ApiCard>(await call('POST', '/cards', { column_id: columnId, title, assignee }))

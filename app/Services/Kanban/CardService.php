@@ -2,7 +2,10 @@
 
 namespace App\Services\Kanban;
 
+use App\Data\CardData;
 use App\Enums\CardAssignee;
+use App\Events\CardBroadcast;
+use App\Events\CardRemoved;
 use App\Models\BoardColumn;
 use App\Models\Card;
 use App\Models\Couple;
@@ -18,9 +21,7 @@ use Illuminate\Validation\ValidationException;
  */
 class CardService
 {
-    public function __construct(private readonly GamificationService $gamification)
-    {
-    }
+    public function __construct(private readonly GamificationService $gamification) {}
 
     /**
      * Создать карточку. $attrs — опциональные параметры (description, due_at, due_end_at);
@@ -59,6 +60,8 @@ class CardService
             'born_done' => $bornDone,
         ]);
 
+        $this->broadcastCard('created', $card);
+
         return $card;
     }
 
@@ -94,7 +97,25 @@ class CardService
             'has_due' => isset($attrs['due_at']),
         ]);
 
+        $this->broadcastCard('backlogCreated', $card);
+
         return $card;
+    }
+
+    /**
+     * Удалить карточку навсегда. Перед удалением фиксируем couple_id/column для broadcast,
+     * чтобы партнёр убрал карточку из доски/бэклога.
+     */
+    public function delete(Card $card): void
+    {
+        $coupleId = $card->couple_id;
+        $columnId = $card->board_column_id;
+        $cardId = $card->id;
+
+        $card->delete();
+        Log::info('[CardService.delete]', ['card_id' => $cardId]);
+
+        broadcast(new CardRemoved($coupleId, $cardId, $columnId))->toOthers();
     }
 
     /** @param array<string,mixed> $attrs */
@@ -104,6 +125,10 @@ class CardService
 
         $card->update($attrs);
         Log::info('[CardService.update]', ['card_id' => $card->id, 'keys' => array_keys($attrs)]);
+
+        // 'updated' покрывает и «убрать с доски» (on_board=false через generic update):
+        // фронт реконсилит локацию карточки по полю onBoard в payload.
+        $this->broadcastCard('updated', $card);
 
         return $card;
     }
@@ -150,51 +175,60 @@ class CardService
      */
     public function move(Card $card, BoardColumn $toColumn, int $toPosition, ?User $actor = null): Card
     {
+        $card = DB::transaction(fn () => $this->moveCore($card, $toColumn, $toPosition, $actor));
+        $this->broadcastCard('moved', $card);
+
+        return $card;
+    }
+
+    /**
+     * Ядро перемещения (без вещания и без собственной транзакции) — переиспользуется
+     * move() и returnToBoard(), чтобы возврат не порождал лишнее событие 'moved'.
+     */
+    private function moveCore(Card $card, BoardColumn $toColumn, int $toPosition, ?User $actor): Card
+    {
         $toColumnId = $toColumn->id;
+        $fromColumnId = $card->board_column_id;
 
-        return DB::transaction(function () use ($card, $toColumn, $toColumnId, $toPosition, $actor) {
-            $fromColumnId = $card->board_column_id;
+        // Относим карточку к целевой колонке; итоговую позицию выставит renumber ниже.
+        $card->update(['board_column_id' => $toColumnId]);
 
-            // Относим карточку к целевой колонке; итоговую позицию выставит renumber ниже.
-            $card->update(['board_column_id' => $toColumnId]);
+        // Целевая колонка: текущий порядок БЕЗ перемещаемой карточки.
+        $targetIds = Card::query()
+            ->where('board_column_id', $toColumnId)
+            ->where('on_board', true) // позиции считаем только среди карточек на доске
+            ->where('id', '!=', $card->id)
+            ->orderBy('position')->orderBy('id')
+            ->pluck('id')->all();
 
-            // Целевая колонка: текущий порядок БЕЗ перемещаемой карточки.
-            $targetIds = Card::query()
-                ->where('board_column_id', $toColumnId)
+        // Вставляем карточку на запрошенный индекс (кламп в границы списка).
+        $index = max(0, min($toPosition, count($targetIds)));
+        array_splice($targetIds, $index, 0, [$card->id]);
+        $this->renumber($targetIds);
+
+        // Переезд между колонками — компактим исходную (убираем «дыру» от ушедшей карточки).
+        if ($fromColumnId !== $toColumnId) {
+            $sourceIds = Card::query()
+                ->where('board_column_id', $fromColumnId)
                 ->where('on_board', true) // позиции считаем только среди карточек на доске
-                ->where('id', '!=', $card->id)
                 ->orderBy('position')->orderBy('id')
                 ->pluck('id')->all();
+            $this->renumber($sourceIds);
+        }
 
-            // Вставляем карточку на запрошенный индекс (кламп в границы списка).
-            $index = max(0, min($toPosition, count($targetIds)));
-            array_splice($targetIds, $index, 0, [$card->id]);
-            $this->renumber($targetIds);
+        $card->refresh(); // position/column обновлены отдельными апдейтами — подтянуть в модель
+        // Завершение/возврат задачи выводится из попадания в терминальную колонку (роль галочки).
+        $this->applyDoneTransition($card, $toColumn, $actor);
+        Log::info('[FIX][CardService.move] reindexed', [
+            'card_id' => $card->id,
+            'from_column' => $fromColumnId,
+            'to_column' => $toColumnId,
+            'requested_pos' => $toPosition,
+            'stored_pos' => $card->position,
+            'done' => $card->done,
+        ]);
 
-            // Переезд между колонками — компактим исходную (убираем «дыру» от ушедшей карточки).
-            if ($fromColumnId !== $toColumnId) {
-                $sourceIds = Card::query()
-                    ->where('board_column_id', $fromColumnId)
-                    ->where('on_board', true) // позиции считаем только среди карточек на доске
-                    ->orderBy('position')->orderBy('id')
-                    ->pluck('id')->all();
-                $this->renumber($sourceIds);
-            }
-
-            $card->refresh(); // position/column обновлены отдельными апдейтами — подтянуть в модель
-            // Завершение/возврат задачи выводится из попадания в терминальную колонку (роль галочки).
-            $this->applyDoneTransition($card, $toColumn, $actor);
-            Log::info('[FIX][CardService.move] reindexed', [
-                'card_id' => $card->id,
-                'from_column' => $fromColumnId,
-                'to_column' => $toColumnId,
-                'requested_pos' => $toPosition,
-                'stored_pos' => $card->position,
-                'done' => $card->done,
-            ]);
-
-            return $card;
-        });
+        return $card;
     }
 
     /**
@@ -209,19 +243,23 @@ class CardService
     {
         Log::debug('[CardService.returnToBoard] start', ['card_id' => $card->id, 'to_column' => $toColumn->id]);
 
-        return DB::transaction(function () use ($card, $toColumn, $actor) {
+        $card = DB::transaction(function () use ($card, $toColumn, $actor) {
             $card->update(['on_board' => true]);
-            $this->move($card, $toColumn, PHP_INT_MAX, $actor); // конец колонки + renumber + done-переход
 
-            Log::info('[CardService.returnToBoard]', [
-                'card_id' => $card->id,
-                'to_column' => $toColumn->id,
-                'stored_pos' => $card->position,
-                'done' => $card->done,
-            ]);
-
-            return $card;
+            // moveCore (не move): возврат не должен порождать отдельное событие 'moved' —
+            // вещаем единый 'returned' ниже, после коммита.
+            return $this->moveCore($card, $toColumn, PHP_INT_MAX, $actor); // конец колонки + renumber + done-переход
         });
+
+        $this->broadcastCard('returned', $card);
+        Log::info('[CardService.returnToBoard]', [
+            'card_id' => $card->id,
+            'to_column' => $toColumn->id,
+            'stored_pos' => $card->position,
+            'done' => $card->done,
+        ]);
+
+        return $card;
     }
 
     /**
@@ -276,4 +314,14 @@ class CardService
         }
     }
 
+    /**
+     * Вещание изменения карточки партнёру (->toOthers(): инициатору не возвращаем — у него
+     * уже применён optimistic-update). Payload — DTO CardData (с onBoard), не сырой Eloquent.
+     *
+     * @param  'created'|'backlogCreated'|'updated'|'moved'|'returned'  $action
+     */
+    private function broadcastCard(string $action, Card $card): void
+    {
+        broadcast(new CardBroadcast($card->couple_id, $action, CardData::fromModel($card)))->toOthers();
+    }
 }

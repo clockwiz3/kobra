@@ -14,7 +14,5 @@ class CoupleActivated
 {
     use Dispatchable;
 
-    public function __construct(public readonly Couple $couple)
-    {
-    }
+    public function __construct(public readonly Couple $couple) {}
 }

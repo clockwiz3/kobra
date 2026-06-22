@@ -19,8 +19,8 @@ class CardData extends Data
         public ?string $dueTime,  // 'HH:MM' — время суток (null = без времени)
         public bool $done,
         public int $position,
-    ) {
-    }
+        public bool $onBoard = true, // false → карточка в бэклоге; нужно фронту для realtime-реконсиляции локации
+    ) {}
 
     public static function fromModel(Card $card): self
     {
@@ -36,6 +36,9 @@ class CardData extends Data
             dueTime: $card->due_time,
             done: $card->done,
             position: $card->position,
+            // ?? true: сразу после Card::create() DB-default on_board (true) ещё не подтянут
+            // в in-memory модель (как и done) → null трактуем как «на доске».
+            onBoard: (bool) ($card->on_board ?? true),
         );
     }
 }

@@ -44,6 +44,13 @@ describe('NavMenu', () => {
     for (const item of navItems) expect(text).toContain(item.label)
   })
 
+  it('навигация: «Главная» → роут dashboard, «Доска» → роут board', async () => {
+    const home = navItems.find((x) => x.key === 'home')
+    const board = navItems.find((x) => x.key === 'board')
+    expect(home?.routeName).toBe('dashboard')
+    expect(board?.routeName).toBe('board')
+  })
+
   it('закрыт (open=false) → drawer и пункты не в DOM', async () => {
     const { w } = await mountMenu({ open: false })
     expect(w.find('.drawer-overlay').exists()).toBe(false)

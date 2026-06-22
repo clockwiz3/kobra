@@ -14,6 +14,7 @@
 | [Дизайн-система](docs/DESIGN-SYSTEM.md) | Токены, темы (`dark`/`light`/`pixel`), гаммы |
 | [UI-библиотека компонентов](docs/ui-library.md) | Modal, Checkbox, Radio, ConfirmDialog, `useConfirm`; конвенции библиотеки |
 | [База данных](docs/DATABASE.md) | ERD и реестр couple-owned таблиц |
+| [Real-time](docs/realtime.md) | Reverb + Echo, presence-канал `couple.{id}`, контракт broadcast-событий |
 
 ---
 

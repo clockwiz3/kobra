@@ -79,11 +79,11 @@ Presence (`here`/`joining`/`leaving`) → онлайн-статус партнё
 12. [x] **Правило реактивности** — раздел «Realtime / Реактивность» в `.ai-factory/rules/base.md` + апдейт real-time-секции `ARCHITECTURE.md` (с «(позже)» на «реализовано»). *(blocked by 4; владелец rules — `/aif-rules`, правим по явному запросу)*
 
 ### Фаза 6 — Тесты
-13. **Pest** — авторизация канала (член/чужой/**изоляция двух пар**) + `Event::fake` диспатч на корректный `PresenceChannel` с DTO; профиль вне контекста. *(blocked by 2, 4)*
-14. **Vitest** — `useCoupleChannel` (событие→стор, presence, fallback, буфер), apply-методы стора, `Home.vue`, обновлённые `NavMenu`/`AppShell` тесты. *(blocked by 6, 7, 9, 10)*
+13. [x] **Pest** — `CoupleChannel` вынесен из channels.php (тестируемо); `ChannelAuthTest` (her/him/чужой/**изоляция двух пар**) + `BroadcastDispatchTest` (11 кейсов: card create/move/update/backlogCreated/returned/remove, column create/rename/reorder/remove, profile→appearance) на корректный `presence-couple.{id}` с DTO. Backend 70/70. *(blocked by 2, 4)*
+14. [x] **Vitest** — `useCoupleChannel` (роутинг событий, presence, идемпотентность, лента, unsubscribe), `board.realtime` (apply-методы), `Home.vue` (счётчики/ссылки/лента/presence/геймификация), `NavMenu` (новый nav). Vitest 207 (29 файлов), vue-tsc чист. *(blocked by 6, 7, 9, 10)*
 
 ### Фаза 7 — Документация
-15. **Docs-чекпоинт** — `docs/realtime.md` (канал, таблица событий, `toOthers`/`X-Socket-ID`, `.env`, `reverb:start`), заметка в `docs/DATABASE.md` (миграций нет), апдейт nav-доки про «Главная»/`/board`. *(blocked by 12, 13, 14)*
+15. [x] **Docs-чекпоинт** — `docs/realtime.md` (канал, таблица событий, `toOthers`/`X-Socket-ID`, `.env`, `reverb:start`, заметка про дашборд/`/board`), строка в README docs-таблице, заметка в `docs/DATABASE.md` (миграций нет). *(blocked by 12, 13, 14)*
 
 ## Commit Plan
 

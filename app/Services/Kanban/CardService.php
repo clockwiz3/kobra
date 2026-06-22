@@ -62,6 +62,41 @@ class CardService
         return $card;
     }
 
+    /**
+     * Создать карточку сразу в бэклоге (on_board=false) — НЕ на доске. $column — колонка-дом
+     * (куда карточка относится по умолчанию; при возврате юзер всё равно выбирает целевую).
+     * done=false и без награды: backlog-карточка не «выполнена». position в бэклоге не значим
+     * (board.cards() фильтрует on_board=true), при возврате move() переиндексирует.
+     *
+     * @param  array<string,mixed>  $attrs
+     */
+    public function createInBacklog(BoardColumn $column, string $title, CardAssignee $assignee = CardAssignee::Together, array $attrs = []): Card
+    {
+        $this->assertValidRange(null, $attrs); // бэкстоп к FormRequest
+
+        $card = Card::create([
+            'board_column_id' => $column->id,
+            'title' => $title,
+            'assignee' => $assignee,
+            'priority' => $attrs['priority'] ?? 'normal',
+            'description' => $attrs['description'] ?? null,
+            'due_at' => $attrs['due_at'] ?? null,
+            'due_end_at' => $attrs['due_end_at'] ?? null,
+            'due_time' => $attrs['due_time'] ?? null,
+            'done' => false,
+            'completed_at' => null,
+            'on_board' => false,
+            'position' => 0,
+        ]);
+        Log::info('[CardService.createInBacklog]', [
+            'card_id' => $card->id,
+            'home_column' => $column->id,
+            'has_due' => isset($attrs['due_at']),
+        ]);
+
+        return $card;
+    }
+
     /** @param array<string,mixed> $attrs */
     public function update(Card $card, array $attrs): Card
     {
@@ -154,6 +189,33 @@ class CardService
                 'from_column' => $fromColumnId,
                 'to_column' => $toColumnId,
                 'requested_pos' => $toPosition,
+                'stored_pos' => $card->position,
+                'done' => $card->done,
+            ]);
+
+            return $card;
+        });
+    }
+
+    /**
+     * Вернуть карточку из бэклога (on_board=false) на доску в колонку $toColumn, в КОНЕЦ списка.
+     * board_column_id убранной карточки сохраняется при «убрать с доски», но целевую колонку
+     * принимаем явным параметром (юзер выбирает её в UI бэклога). Сначала поднимаем on_board=true,
+     * затем переиспользуем move() (PHP_INT_MAX → клампится в конец): он делает renumber позиций
+     * и applyDoneTransition (терминал → done=true + награда идемпотентно; не-терминал → done=false).
+     * Всё в транзакции: промежуточное состояние (on_board=true без корректной позиции) не видно.
+     */
+    public function returnToBoard(Card $card, BoardColumn $toColumn, ?User $actor = null): Card
+    {
+        Log::debug('[CardService.returnToBoard] start', ['card_id' => $card->id, 'to_column' => $toColumn->id]);
+
+        return DB::transaction(function () use ($card, $toColumn, $actor) {
+            $card->update(['on_board' => true]);
+            $this->move($card, $toColumn, PHP_INT_MAX, $actor); // конец колонки + renumber + done-переход
+
+            Log::info('[CardService.returnToBoard]', [
+                'card_id' => $card->id,
+                'to_column' => $toColumn->id,
                 'stored_pos' => $card->position,
                 'done' => $card->done,
             ]);

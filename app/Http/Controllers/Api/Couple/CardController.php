@@ -67,6 +67,20 @@ class CardController extends CoupleController
         return CardData::fromModel($this->cards->move(Card::findOrFail($cardId), $column, $data['position'], $request->user()));
     }
 
+    /** Вернуть карточку из бэклога на доску в конец выбранной колонки (on_board=false → true). */
+    public function return(Request $request, int $cardId): CardData
+    {
+        $data = $request->validate([
+            'column_id' => 'required|integer',
+        ]);
+        // Целевую колонку резолвим через CoupleScoped (findOrFail → 404 на чужую колонку),
+        // карточку — тоже scoped: возврат чужой карточки невозможен.
+        $column = BoardColumn::findOrFail($data['column_id']);
+        Log::debug('[CardController.return]', ['card_id' => $cardId, 'to_column' => $column->id]);
+
+        return CardData::fromModel($this->cards->returnToBoard(Card::findOrFail($cardId), $column, $request->user()));
+    }
+
     public function destroy(int $cardId): Response
     {
         Card::findOrFail($cardId)->delete();

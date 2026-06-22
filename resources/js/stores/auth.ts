@@ -30,6 +30,12 @@ export const useAuthStore = defineStore('auth', () => {
     log.info('logout')
   }
 
+  /** Применить обновлённый профиль (после PATCH /api/user) в локальный стор. */
+  function applyProfile(updated: AuthUser): void {
+    user.value = updated
+    log.debug('applyProfile', { id: updated.id })
+  }
+
   /** Восстановить сессию из сохранённого токена (валидация через /api/user). Идемпотентно. */
   async function restore(): Promise<void> {
     if (ready.value) return
@@ -48,5 +54,5 @@ export const useAuthStore = defineStore('auth', () => {
     log.debug('restore done', { authed: token.value !== null && user.value !== null })
   }
 
-  return { user, token, ready, isAuthenticated, login, logout, restore }
+  return { user, token, ready, isAuthenticated, login, logout, restore, applyProfile }
 })

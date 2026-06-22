@@ -27,6 +27,8 @@ import { useConfirm } from '@/composables/useConfirm'
 | `BaseChip` | Чип/тег | слот контента; props `tone: 'neutral'\|'accent'\|'warn'` (геометрия едина, меняется только цвет/фон), `solid` (алиас `accent`), `removable`; emits `remove` |
 | `BaseCheckbox` | Чекбокс | `v-model:boolean`; props `label/disabled/indeterminate/name`; слот лейбла |
 | `BaseRadioGroup` + `BaseRadio` | Радио-группа | группа: `v-model` (value), props `name/disabled/options`; опция: props `value/label/disabled` |
+| `ColorSpectrum` | HSV-колорпикер | `v-model:string` (hex `#rrggbb`); квадрат насыщенность/яркость + ползунок оттенка + hex-поле |
+| `BaseColorPicker` | Пикер рамки карточки (appearance) | `v-model:CardFrame`; заливка solid/gradient (настоящий `ColorSpectrum` + быстрые свотчи + угол/стопы), стиль `solid/dashed/dotted`, толщина 1–3, тоггл «Мерцание» (анимация любого цвета/градиента), живое превью. Рендер рамки — `composables/useCardFrame.ts` |
 | `BaseModal` | Модальное окно | `v-model:boolean`; props `title/closable/closeOnOverlay/closeOnEsc/size`; слоты `header/title/default/footer`; emits `close(reason)`/`open` |
 | `ConfirmDialog` | Подтверждение (композит) | `v-model:boolean`; props `title/message/confirmText/cancelText/tone/choices/defaultChoice`; emits `confirm({choice})`/`cancel` |
 | `useConfirm()` | Императивный сервис подтверждения | `await confirm(opts) → { confirmed, choice? }` |

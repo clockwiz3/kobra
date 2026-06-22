@@ -910,3 +910,19 @@ section.block { padding: 72px 0; border-top: 1px solid var(--border); }
 .choice__text { display: flex; flex-direction: column; gap: 3px; }
 .choice__label { font-weight: 600; font-size: 15px; color: var(--text); }
 .choice__hint { font-size: 13px; color: var(--text-muted); font-weight: 400; }
+
+/* ── Мерцание рамки карточки («animated») ──
+   Заливку/градиент рамки задаёт useCardFrame ИНЛАЙНОМ (чтобы не зависеть от специфичности
+   scoped-стилей); этот класс добавляет только бесконечную анимацию позиции градиента —
+   блик бежит по рамке. Работает и для сплошного цвета, и для градиента.
+   Уважает prefers-reduced-motion. */
+.frame-shimmer-anim {
+  animation: frame-shimmer 3.2s linear infinite;
+}
+@keyframes frame-shimmer {
+  0%   { background-position: 0 0, 0% 50%; }
+  100% { background-position: 0 0, 300% 50%; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .frame-shimmer-anim { animation: none; }
+}

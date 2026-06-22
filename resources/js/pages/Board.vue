@@ -7,23 +7,20 @@ import KanbanColumn from '@/components/kanban/KanbanColumn.vue'
 import { CardDetailDrawer } from '@/components/composite'
 import type { Column } from '@/types/board'
 import { useBoardStore } from '@/stores/board'
+import { useAssignees } from '@/composables/useAssignees'
 import { useLogger } from '@/composables/useLogger'
 import { prefersReducedMotion } from '@/composables/useTheme'
 
 const store = useBoardStore()
 const log = useLogger('Board')
 const reduced = prefersReducedMotion()
+const { assigneeFilterOptions } = useAssignees()
 
 const newColumn = ref('')
 const showAddColumn = ref(false)
 
-// Опции фильтров доски (значения совпадают со стором: filterAssignee / filterDeadline)
-const assigneeOptions = [
-  { value: 'all', label: 'Кто угодно' },
-  { value: 'him', label: 'Он' },
-  { value: 'her', label: 'Она' },
-  { value: 'together', label: '♥ Вместе' },
-]
+// Опции фильтров доски (значения совпадают со стором: filterAssignee / filterDeadline).
+// По исполнителю — имена аккаунтов пары (см. useAssignees), + «Кто угодно».
 const deadlineOptions = [
   { value: 'all', label: 'Дедлайн: любой' },
   { value: 'has', label: 'С дедлайном' },
@@ -102,7 +99,7 @@ function onColumnDragEnd() {
         <BaseButton variant="secondary" size="sm" @click="openAddColumn">+ колонка</BaseButton>
         <BaseSelect
           :model-value="store.filterAssignee"
-          :options="assigneeOptions"
+          :options="assigneeFilterOptions"
           aria-label="Фильтр по исполнителю"
           @update:model-value="onAssigneeFilter"
         />

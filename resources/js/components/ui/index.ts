@@ -33,6 +33,8 @@ export { default as BaseRadio } from './BaseRadio.vue'
 export { default as BaseRadioGroup } from './BaseRadioGroup.vue'
 export { default as BaseDatePicker } from './BaseDatePicker.vue'
 export { default as BaseTimePicker } from './BaseTimePicker.vue'
+export { default as BaseColorPicker } from './BaseColorPicker.vue'
+export { default as ColorSpectrum } from './ColorSpectrum.vue'
 
 // — Брендинг / темизация —
 export { default as BrandMark } from './BrandMark.vue'

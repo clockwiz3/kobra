@@ -13,6 +13,8 @@ class UserData extends Data
         public ?string $name,
         public ?string $email,
         public ?string $avatar,
+        /** @var array<string, mixed>|null per-user «внешний вид» (рамка карточек), из settings['appearance'] */
+        public ?array $appearance,
     ) {}
 
     public static function fromModel(User $user): self
@@ -22,6 +24,7 @@ class UserData extends Data
             name: $user->name,
             email: $user->email,
             avatar: $user->avatar,
+            appearance: $user->settings['appearance'] ?? null,
         );
     }
 }

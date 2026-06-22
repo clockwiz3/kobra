@@ -16,6 +16,7 @@ function makeRouter(): Router {
       { path: '/wishlists', name: 'wishlists', component: Blank },
       { path: '/gantt', name: 'gantt', component: Blank },
       { path: '/calendar', name: 'calendar', component: Blank },
+      { path: '/profile', name: 'profile', component: Blank },
       { path: '/login', name: 'login', component: Blank },
     ],
   })

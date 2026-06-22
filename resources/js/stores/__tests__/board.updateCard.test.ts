@@ -15,7 +15,7 @@ import { boardApi } from '@/api/board'
 import type { Card } from '@/types/board'
 
 const card = (id: string): Card => ({
-  id, title: 'A', assignee: 'together', labels: [], dueAt: null, dueEndAt: null, done: false,
+  id, title: 'A', assignee: 'together', labels: [], priority: 'normal', dueAt: null, dueTime: null, dueEndAt: null, done: false,
 })
 
 beforeEach(() => {
@@ -40,7 +40,7 @@ describe('boardStore.updateCard', () => {
     store.backed = true
     vi.mocked(boardApi.updateCard).mockResolvedValue({
       id: 5, columnId: 1, title: 'A', description: null, assignee: 'together',
-      dueAt: '2026-06-20', dueEndAt: '2026-06-24', done: false, position: 0,
+      priority: 'normal', dueAt: '2026-06-20', dueTime: null, dueEndAt: '2026-06-24', done: false, position: 0,
     })
 
     await store.updateCard('5', { dueAt: '2026-06-20', dueEndAt: '2026-06-24' })

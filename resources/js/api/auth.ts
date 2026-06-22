@@ -1,6 +1,7 @@
 // Typed-клиент авторизации (Sanctum personal access token). Паттерн как api/board.ts.
 // Токен живёт в localStorage('cuploid.token') — его же читает boardApi.
 
+import type { UserAppearance } from '@/types/board'
 import { useLogger } from '@/composables/useLogger'
 
 const log = useLogger('authApi')
@@ -11,6 +12,7 @@ export interface AuthUser {
   name: string | null
   email: string | null
   avatar: string | null
+  appearance: UserAppearance | null
 }
 
 export interface AuthSession {

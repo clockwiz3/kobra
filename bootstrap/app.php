@@ -19,6 +19,10 @@ return Application::configure(basePath: dirname(__DIR__))
         attributes: ['middleware' => ['auth:sanctum']],
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        // За Caddy (прод на Tailscale) доверяем X-Forwarded-* — иначе Laravel
+        // считает запрос http и ломает secure-куки/редиректы. В dev заголовков нет → no-op.
+        $middleware->trustProxies(at: '*');
+
         $middleware->alias([
             'couple.context' => \App\Http\Middleware\ResolveCoupleContext::class,
         ]);

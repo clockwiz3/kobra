@@ -3,6 +3,7 @@ import { createPinia } from 'pinia'
 import { createRouter, createWebHistory } from 'vue-router'
 import '../css/app.css'
 import { useTheme } from './composables/useTheme'
+import { useAnimatedFavicon } from './composables/useAnimatedFavicon'
 import { useAuthStore } from './stores/auth'
 import { initEcho } from './bootstrap'
 import App from './App.vue'
@@ -43,6 +44,9 @@ app.use(router)
 
 // Навесить data-theme / data-accent на .ds-root из сохранённого выбора
 useTheme()
+
+// Кобра во вкладке шевелится (в фоне и при reduced-motion — статичная)
+useAnimatedFavicon()
 
 const auth = useAuthStore(pinia)
 

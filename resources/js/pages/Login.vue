@@ -5,6 +5,7 @@ import ThemeSwitch from '@/components/ui/ThemeSwitch.vue'
 import BaseField from '@/components/ui/BaseField.vue'
 import BaseButton from '@/components/ui/BaseButton.vue'
 import BrandMark from '@/components/ui/BrandMark.vue'
+import KobraSprite from '@/components/ui/KobraSprite.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useLogger } from '@/composables/useLogger'
 
@@ -52,6 +53,7 @@ async function submit() {
   <main class="auth-main">
     <div class="wrap">
       <div class="card auth-card" role="form">
+        <KobraSprite class="auth-kobra" :size="72" />
         <h1 class="sec-title" style="font-size: 26px; margin: 0 0 4px">Привет &hearts;</h1>
         <p style="color: var(--text-muted); margin: 0 0 20px">Заходи.</p>
 
@@ -83,6 +85,7 @@ async function submit() {
 </template>
 
 <style scoped>
+.auth-kobra { margin: 0 0 12px; }
 .auth-main {
   display: flex;
   align-items: center;

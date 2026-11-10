@@ -43,6 +43,7 @@ export { default as PresenceDot } from './PresenceDot.vue'
 export { default as BrandMark } from './BrandMark.vue'
 export { default as ThemeSwitch } from './ThemeSwitch.vue'
 export { default as AccentPicker } from './AccentPicker.vue'
+export { default as KobraSprite } from './KobraSprite.vue'
 
 // — Overlay / диалоговый слой —
 export { default as BaseModal } from './BaseModal.vue'

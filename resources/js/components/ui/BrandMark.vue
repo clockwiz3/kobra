@@ -2,7 +2,12 @@
 // Лого Kobra: иконка Tabler Heart (@vicons/tabler), ЗАЛИТАЯ фирменным градиентом
 // (accent → accent-2), без подложки-квадрата. Градиент темо-реактивный (CSS-переменные):
 // меняется вместе с темой/гаммой. Заливка через ссылку fill: url(#kobra-heart-grad).
+// В пиксельной теме вместо сердца — пиксельная кобра.
 import { Heart } from '@vicons/tabler'
+import KobraSprite from './KobraSprite.vue'
+import { useTheme } from '@/composables/useTheme'
+
+const { theme } = useTheme()
 </script>
 
 <template>
@@ -16,7 +21,8 @@ import { Heart } from '@vicons/tabler'
         </linearGradient>
       </defs>
     </svg>
-    <Heart class="brand-heart" />
+    <KobraSprite v-if="theme === 'pixel'" :size="28" label="" aria-hidden="true" />
+    <Heart v-else class="brand-heart" />
     Kobra
   </div>
 </template>

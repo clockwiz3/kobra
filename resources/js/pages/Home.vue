@@ -27,7 +27,7 @@ const greeting = computed(() => {
 const hasPartner = computed(() => store.members.length > 1)
 // Второй участник пары — тот, кто не текущий юзер.
 const partnerName = computed(
-  () => store.members.find((m) => m.id !== auth.user?.id)?.name?.trim() || 'Второй',
+  () => store.members.find((m) => String(m.id) !== String(auth.user?.id))?.name?.trim() || 'Второй',
 )
 
 const stats = computed(() => [

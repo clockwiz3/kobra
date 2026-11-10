@@ -30,11 +30,7 @@ class TelegramChannel implements NotificationChannelContract
             return;
         }
 
-        $text = match ($notification->type) {
-            'waitlist_confirmation' => 'Подтвердите подписку Cuploid ♥: '
-                .rtrim((string) config('app.url'), '/').'/confirm/'.($notification->payload['token'] ?? ''),
-            default => $notification->payload['message'] ?? 'Новое уведомление от Cuploid ♥',
-        };
+        $text = $notification->payload['message'] ?? 'Новое уведомление в Kobra ♥';
 
         if (! $this->telegram->sendMessage((int) $telegramId, $text)) {
             throw new RuntimeException('Telegram send failed.');

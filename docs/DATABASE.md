@@ -1,12 +1,10 @@
-# Cuploid — Модель данных (ERD)
+# База данных
 
-Источник правды по схеме БД. Стек: **PostgreSQL + Eloquent**. Архитектура: **пара = изолированный shard** (см. `.ai-factory/ARCHITECTURE.md`).
+Схема PostgreSQL и правила для неё. Данные пары изолированы по `couple_id` (см. `.ai-factory/ARCHITECTURE.md`).
 
-Статусы:
-- **MIGRATE-NOW** — мигрируется на этапе 0 (фундамент + вайтлист).
-- **DOCUMENT-ONLY** — задокументировано для совместимости FK, но НЕ мигрируется сейчас.
+Ниже сначала таблицы, которые уже есть, потом наброски будущих.
 
-## Conventions
+## Соглашения
 
 - Таблицы `snake_case` мн.ч.; столбцы `snake_case`; FK `<entity>_id`.
 - **Все couple-owned таблицы** несут `couple_id BIGINT UNSIGNED NOT NULL`, FK → `couples.id` **ON DELETE CASCADE**, и используют trait `CoupleScoped` (global scope **fail-closed**).
@@ -16,16 +14,16 @@
 - Денормализация активности членства (`couple_user.is_active`) + partial unique — DB-инвариант «одна активная пара на юзера».
 - Soft-delete только у `couples` (архив шарда); couple-owned дети НЕ soft-delete (заморозка через статус пары, уничтожение через FK cascade).
 
-## Closed list — couple-owned таблицы (CI-гейт)
+## Таблицы пары
 
-Эти таблицы scoped по `couple_id` и проверяются grep-гейтом (запрет `DB::table()` по ним, обязательный `couple_id`-предикат):
+Эти таблицы фильтруются по `couple_id`, и `DB::table()` по ним не используем.
 
-**Сейчас:** `gamification_profiles`, `activity_events`, `achievement_unlocks`, `boards`, `board_columns`, `cards`, `labels`, `card_label`.
-**Будущие (DOCUMENT-ONLY):** `card_comments`, `wishlists`, `wishlist_items`, `item_reservations`, `couple_theme`, `couple_streak_days`, `hearts_transactions`, `couple_quests`.
+**Есть:** `gamification_profiles`, `activity_events`, `achievement_unlocks`, `boards`, `board_columns`, `cards`, `labels`, `card_label`.
+**Будут:** `card_comments`, `wishlists`, `wishlist_items`, `item_reservations`, `couple_theme`, `couple_streak_days`, `hearts_transactions`, `couple_quests`.
 
-> НЕ scoped (хотя связаны с парами): `couples` (это сам shard-root), `couple_user`, `couple_invitations` (membership / pre-active — доступ через lifecycle-сервисы, не tenant-запросами). `users`, `notifications`, `telegram_link_tokens`, `waitlist_entries` — cross/pre-shard.
+> НЕ scoped (хотя связаны с парами): `couples` (это сам shard-root), `couple_user`, `couple_invitations` (membership / pre-active — доступ через lifecycle-сервисы, не tenant-запросами). `users`, `notifications`, `telegram_link_tokens` — вне пары.
 
-## ERD (ядро, MIGRATE-NOW)
+## Схема ядра
 
 ```mermaid
 erDiagram
@@ -38,12 +36,10 @@ erDiagram
     couples ||--o{ couple_invitations : "инвайты"
     users ||--o{ activity_events : "actor (SET NULL)"
     users ||--o{ notifications : "notifiable (morph)"
-    waitlist_entries ||--o{ notifications : "notifiable (morph)"
     users ||--o{ telegram_link_tokens : "линковка"
-    waitlist_entries ||--o{ telegram_link_tokens : "линковка"
 ```
 
-## MIGRATE-NOW таблицы
+## Таблицы
 
 ### users — НЕ scoped (cross-shard identity)
 | Столбец | Тип | Заметки |
@@ -181,7 +177,7 @@ erDiagram
 | Столбец | Тип | Заметки |
 |---|---|---|
 | id | bigint PK | |
-| notifiable_type | string | morphMap: `user`→User, `waitlist`→WaitlistEntry |
+| notifiable_type | string | morphMap: `user`→User |
 | notifiable_id | bigint | |
 | channel | enum(email,telegram,push) | |
 | type | string | event-key |
@@ -202,60 +198,39 @@ erDiagram
 | id | bigint PK | |
 | token | string UNIQUE | deep-link `?start=<token>` |
 | user_id | bigint FK nullable | |
-| waitlist_entry_id | bigint FK nullable | |
 | telegram_id | bigint nullable | проставляется при линковке |
 | status | enum(pending,linked,expired) | |
 | expires_at | timestamp | |
 | timestamps | | |
 
-### waitlist_entries — НЕ scoped (pre-account)
-| Столбец | Тип | Заметки |
-|---|---|---|
-| id | bigint PK | |
-| email | string UNIQUE | |
-| name | string nullable | |
-| status | enum(pending,confirmed,invited) | |
-| confirmation_token | string nullable | partial unique WHERE not null |
-| confirmed_at | timestamp nullable | |
-| telegram_id | bigint nullable | |
-| utm_source/medium/campaign | string nullable | |
-| locale | string nullable | |
-| timestamps | | |
-
-`INDEX(status, id)`. **БЕЗ** referral_code / referred_by / position. Порядок FIFO по created_at; позиция выводится на чтении (`COUNT confirmed WHERE id<=this.id`), не хранится. Конверсия в юзера — по email при регистрации (FK не держим).
-
 > `personal_access_tokens` — создаётся Sanctum (`install:api`), не описываем.
 
-## DOCUMENT-ONLY (будущие фичи — couple-scoped, не мигрируем сейчас)
+## Будущие фичи (наброски)
 
-### Kanban (✅ МИГРИРОВАНО, milestone Kanban)
+### Канбан (уже есть)
 - `boards`(couple_id, name, position), `board_columns`(couple_id, board_id, title, position, **is_terminal** _(терминальная «Готово»-колонка; ровно одна на доску — partial unique index `board_columns_one_terminal_per_board`; удалять нельзя → 422)_), `cards`(couple_id, board_column_id, title, description, **assignee enum** him/her/together, due_at, **due_end_at** _(конец диапазона дедлайна; null = одиночная дата, due_at = начало/single)_, **done/completed_at** _(выводятся из попадания карточки в терминальную колонку: перенос в «Готово» закрывает задачу + событие `task_completed` идемпотентно по `card_done_<id>`, вынос обратно — возвращает в работу без отрицательных начислений; отдельной галочки нет)_, **on_board** _(true = на доске; false = «бэклог»/раздел «Задачи»: карточка убрана с доски ИЛИ создана сразу в бэклоге — НЕ удаление, остаётся в БД с сохранённой колонкой-домом; `board_column_id` всё ещё указывает на колонку. Индекс `(board_column_id, on_board, position)`; `board_columns.cards()` фильтрует `on_board=true`)_, position), `labels`(couple_id, name, color), `card_label`(couple_id, card_id, label_id, unique). Все couple-scoped (CASCADE). `card_comments` — отложено. Real-time через Reverb на presence-канале `couple.{id}` — **миграций не добавляет** (контракт broadcast-событий см. [realtime.md](realtime.md)).
 
 > **Бэклог (раздел «Задачи»).** `on_board=false` — карточки вне доски: убранные с неё (`PATCH /api/couple/cards/{id}` с `on_board:false`) или созданные сразу там (`POST /api/couple/backlog`). Список — `GET /api/couple/backlog`. Возврат на доске — `PATCH /api/couple/cards/{id}/return` с `column_id` (в конец выбранной колонки; done пересчитывается по терминальности). Удаление навсегда — обычный `DELETE /api/couple/cards/{id}`.
 
-### Wishlists (milestone Wishlists)
+### Вишлисты
 - `wishlists`(couple_id), `wishlist_items`(wishlist_id, title, url, price), `item_reservations`(item_id, reserved_by_user_id) — «скрытая бронь»: видна резервирующему, скрыта от партнёра.
 
-### Customization Engine («цифровой ад»)
-- `themes` (GLOBAL каталог), `couple_theme`(couple_id, theme_key, accent_key, custom_tokens json), `animation_presets`, `particle_presets`, `easter_eggs`. Выбор пары персистится shard-scoped; часть тем/гамм — за hearts.
+### Кастомизация
+- `couple_theme`(couple_id, theme_key, accent_key, custom_tokens json): общая тема пары. Может быть, часть тем открывается за hearts.
 
-### Gamification v2 (fast-follow, гейт по retention)
+### Геймификация, дальше
 - `couple_streak_days`(couple_id, day, both_acted) — материализация стрика (бонус-флаг, не драйвер).
 - `hearts_transactions`(couple_id, delta, reason, ...) — ledger валюты (баланс уже в gamification_profiles.hearts_balance).
 - `quests` (каталог) + `couple_quests`(couple_id, quest_id, progress) — кооперативные, upside-only (истечение не показывать как провал).
-
-### system_audit_log (если понадобится)
-- Отдельная UNSCOPED таблица для couple-less/системного аудита — чтобы `activity_events` оставался строго shard-local NOT NULL.
 
 ## Жизненный цикл и удаление
 
 - **Dissolution / выход** → `couples.status=archived` + `archived_at` + soft delete; гейм-стейт заморожен (retain). Бамп `cache_version`, инвалидация Reverb-nonce.
 - **Re-pairing** → НОВАЯ строка `couples` (свежий shard), без переноса XP/стрика. Reconcile архива — только за grace-window флагом.
-- **Account deletion** (right-to-be-forgotten) → `CoupleDeletionService` в транзакции: `couple->forceDelete()` (каскад по всем couple-owned детям) → удалить юзера → уведомить выжившего партнёра. По умолчанию grace-window + уведомление (Q3).
-- **TTL-purge** архивных шардов — конфигурируемо (Q4).
+- **Удаление аккаунта** → `CoupleDeletionService` в транзакции: `couple->forceDelete()` (каскадом уходят все данные пары), затем удаляется юзер.
 
 ## Порядок миграций (пиннированный)
 
-`users` → `couples` → `couple_user` → `couple_invitations` → `achievements` → `activity_events` → `gamification_profiles` → `achievement_unlocks` → `notifications` → `telegram_link_tokens` → `waitlist_entries`.
+`users` → `couples` → `couple_user` → `couple_invitations` → `achievements` → `activity_events` → `gamification_profiles` → `achievement_unlocks` → `notifications` → `telegram_link_tokens`.
 
-CI: интроспекция `information_schema` — каждый `couple_id` FK обязан иметь `ON DELETE CASCADE`; проверка `migrate:fresh`.
+Каждый FK на `couple_id` должен быть `ON DELETE CASCADE`.

@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 
 /**
- * OUTBOX-уведомление (таблица notification_outbox). Полиморфный notifiable (User|WaitlistEntry via morphMap).
+ * OUTBOX-уведомление (таблица notification_outbox). Полиморфный notifiable (сейчас только User, через morphMap).
  * НЕ CoupleScoped — доставка роутится по notifiable; couple_id лишь для scoped admin/purge.
  */
 class OutboxNotification extends Model

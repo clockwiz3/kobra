@@ -5,7 +5,7 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 // OUTBOX доставки. Имя `notification_outbox` (не `notifications`) — чтобы не конфликтовать
-// с relation Notifiable::notifications() из Laravel. Полиморфный notifiable (user|waitlist).
+// с relation Notifiable::notifications() из Laravel. Полиморфный notifiable (user).
 // НЕ CoupleScoped (роутинг по notifiable).
 return new class extends Migration
 {
@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('notification_outbox', function (Blueprint $table) {
             $table->id();
-            $table->string('notifiable_type'); // morphMap alias: user|waitlist
+            $table->string('notifiable_type'); // morphMap alias: user
             $table->unsignedBigInteger('notifiable_id');
             $table->string('channel'); // email|telegram|push
             $table->string('type');    // event-key

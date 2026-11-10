@@ -3,7 +3,6 @@
 namespace App\Providers;
 
 use App\Models\User;
-use App\Models\WaitlistEntry;
 use App\Support\CoupleContext;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Database\Eloquent\Relations\Relation;
@@ -32,7 +31,6 @@ class AppServiceProvider extends ServiceProvider
         // Стабильные type-строки для полиморфных связей (outbox notifiable, Sanctum tokenable).
         Relation::enforceMorphMap([
             'user' => User::class,
-            'waitlist' => WaitlistEntry::class,
         ]);
 
         // Listener CreateGamificationProfile авто-регистрируется Laravel (discovery в app/Listeners),

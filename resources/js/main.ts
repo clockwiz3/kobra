@@ -31,9 +31,8 @@ const router = createRouter({
         { path: 'profile', name: 'profile', component: () => import('./pages/Profile.vue') },
       ],
     },
-    // Вне каркаса (без меню): вход и подтверждение вайтлиста.
+    // Вне каркаса (без меню): вход.
     { path: '/login', name: 'login', component: () => import('./pages/Login.vue') },
-    { path: '/confirm/:token', name: 'waitlist.confirm', component: () => import('./pages/WaitlistConfirm.vue') },
   ],
 })
 

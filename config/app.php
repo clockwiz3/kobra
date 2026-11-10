@@ -123,4 +123,8 @@ return [
         'store' => env('APP_MAINTENANCE_STORE', 'database'),
     ],
 
+    // Пароль, который CoupleSeeder ставит обоим аккаунтам при первом сиде.
+    // Пусто — сидер сгенерирует случайный и выведет в консоль.
+    'seed_password' => env('COUPLE_SEED_PASSWORD'),
+
 ];

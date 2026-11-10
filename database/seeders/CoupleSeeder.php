@@ -8,9 +8,11 @@ use App\Services\Kanban\BoardService;
 use App\Support\CoupleContext;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 
 /**
- * Стартовый shard для закрытого запуска «только для нас двоих»: Леся + Серёжа.
+ * Наша пара: Леся + Серёжа. Пароль берётся из COUPLE_SEED_PASSWORD (config app.seed_password),
+ * если пусто — генерируется случайный и печатается в консоль один раз.
  *
  * Идемпотентно: повторный seed не плодит пользователей и пары. Shard поднимается
  * штатным lifecycle (invite → accept), поэтому gamification-профиль создаётся через
@@ -19,16 +21,16 @@ use Illuminate\Support\Facades\Hash;
  */
 class CoupleSeeder extends Seeder
 {
-    /** Общий пароль обоих аккаунтов закрытого запуска (меняй под себя). */
-    private const PASSWORD = 'test-password';
-
     public function run(): void
     {
+        $configured = (string) config('app.seed_password');
+        $password = $configured !== '' ? $configured : Str::password(16, symbols: false);
+
         $lesya = User::firstOrCreate(
             ['email' => 'lesya@ix.app'],
             [
                 'name' => 'Леся',
-                'password' => Hash::make(self::PASSWORD),
+                'password' => Hash::make($password),
                 'email_verified_at' => now(),
                 'locale' => 'ru',
             ],
@@ -38,7 +40,7 @@ class CoupleSeeder extends Seeder
             ['email' => 'seryozha@ix.app'],
             [
                 'name' => 'Серёжа',
-                'password' => Hash::make(self::PASSWORD),
+                'password' => Hash::make($password),
                 'email_verified_at' => now(),
                 'locale' => 'ru',
             ],
@@ -64,6 +66,8 @@ class CoupleSeeder extends Seeder
         });
 
         $this->command?->info("CoupleSeeder: пара #{$couple->id} «Леся & Серёжа» активирована.");
-        $this->command?->info('  Логины: lesya@ix.app / seryozha@ix.app · пароль: ' . self::PASSWORD);
+        if ($configured === '' && $lesya->wasRecentlyCreated) {
+            $this->command?->warn("  Сгенерирован пароль для обоих аккаунтов: {$password}");
+        }
     }
 }

@@ -1,69 +1,77 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Kobra
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Наш с Лесей общий трекер дел. Доска с карточками, бэклог, и всё, что один двигает, второй видит сразу. Пользователей ровно двое, регистрации нет и не будет.
 
-## Документация
+Внутри проект называется `cuploid`: так называются репозиторий, неймспейсы, база и ключи в localStorage. Снаружи он Kobra. Переименовывать внутрянку не стоит, иначе слетят токены и сохранённая тема.
 
-| Документ | Описание |
-|----------|----------|
-| [Дизайн-система](docs/DESIGN-SYSTEM.md) | Токены, темы (`dark`/`light`/`pixel`), гаммы |
-| [UI-библиотека компонентов](docs/ui-library.md) | Modal, Checkbox, Radio, ConfirmDialog, `useConfirm`; конвенции библиотеки |
-| [База данных](docs/DATABASE.md) | ERD и реестр couple-owned таблиц |
-| [Real-time](docs/realtime.md) | Reverb + Echo, presence-канал `couple.{id}`, контракт broadcast-событий |
+## Что уже работает
 
----
+- **Доска.** Колонки, карточки, перетаскивание. У карточки есть исполнитель (Леся, Серёжа или вместе), приоритет, дедлайн (дата или период) и время. Колонка «Готово» особая: карточка, попавшая туда, считается сделанной.
+- **Задачи (бэклог).** Сюда убираются карточки, которые пока не нужны на доске. Отсюда их можно вернуть в любую колонку.
+- **Главная.** Счётчики, кто сейчас в сети и лента свежих изменений.
+- **Реалтайм.** Reverb и Echo: изменения прилетают второму без перезагрузки.
+- **Внешний вид.** Три темы (светлая, тёмная, пиксельная) и пять гамм. У каждого своя рамка карточек: цвет или градиент, пунктир, мерцание.
+- **PWA.** Ставится на телефон как приложение.
 
-## About Laravel
+Вишлисты, Гант и Календарь пока заглушки в меню.
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+## Стек
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+Laravel 13 (PHP 8.3) отдаёт API, фронт на Vue 3 + TypeScript + Vite, Pinia и Tailwind v4. База PostgreSQL, вход через Sanctum по токену, реалтайм на Laravel Reverb. Типы из PHP в TS переносит `spatie/laravel-data`. Тесты: Pest на бэке, Vitest на фронте.
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+## Запуск локально
 
-## Learning Laravel
-
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
-
-In addition, [Laracasts](https://laracasts.com) contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
-
-You can also watch bite-sized lessons with real-world projects on [Laravel Learn](https://laravel.com/learn), where you will be guided through building a Laravel application from scratch while learning PHP fundamentals.
-
-## Agentic Development
-
-Laravel's predictable structure and conventions make it ideal for AI coding agents like Claude Code, Cursor, and GitHub Copilot. Install [Laravel Boost](https://laravel.com/docs/ai) to supercharge your AI workflow:
+На Windows php, artisan и composer живут в Herd, поэтому запускаются из PowerShell.
 
 ```bash
-composer require laravel/boost --dev
-
-php artisan boost:install
+composer setup
 ```
 
-Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
+```bash
+php artisan db:seed --class=CoupleSeeder
+```
 
-## Contributing
+Сидер создаёт нашу пару и доску. Его надо запускать напрямую: `DatabaseSeeder` глушит модельные события, и `couple_id` не проставится. Пароль аккаунтов берётся из `COUPLE_SEED_PASSWORD` в `.env`; если там пусто, сидер придумает случайный и покажет его один раз.
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+Сменить пароль потом (заодно разлогинит со всех устройств):
 
-## Code of Conduct
+```bash
+php artisan user:password lesya@ix.app
+```
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+Дальше два процесса в разных терминалах:
 
-## Security Vulnerabilities
+```bash
+npm run dev
+```
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+```bash
+php artisan reverb:start
+```
 
-## License
+Сайт открывается через Herd на `http://cuploid.test/`.
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+Тесты:
+
+```bash
+php artisan test
+```
+
+```bash
+npm run test
+```
+
+## Как устроено
+
+Пара здесь отдельный изолированный кусок данных: у всех её таблиц есть `couple_id`, а трейт `CoupleScoped` не даёт прочитать чужое. Для двоих это перестраховка, но она уже написана и покрыта тестами, так что пусть будет. Подробнее в [ARCHITECTURE.md](.ai-factory/ARCHITECTURE.md).
+
+Доки:
+
+- [База данных](docs/DATABASE.md): таблицы и что в них лежит
+- [Реалтайм](docs/realtime.md): канал, события и как добавить новое
+- [Дизайн-система](docs/DESIGN-SYSTEM.md): темы, гаммы, токены
+- [UI-компоненты](docs/ui-library.md): модалки, чекбоксы, подтверждения
+
+## Прод
+
+Крутится на своём VPS: Caddy, PHP-FPM, Postgres и Reverb под systemd. Деплой пока ручной: архив исходников на сервер, затем `composer install`, `npm run build`, `migrate` и рестарт Reverb.

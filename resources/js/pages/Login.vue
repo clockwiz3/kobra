@@ -33,7 +33,7 @@ async function submit() {
       log.warn('rejected')
     }
   } catch (e) {
-    error.value = 'Сеть недоступна. Попробуйте ещё раз.'
+    error.value = 'Нет связи с сервером. Попробуй ещё раз.'
     log.error('network', e)
   } finally {
     loading.value = false
@@ -52,15 +52,15 @@ async function submit() {
   <main class="auth-main">
     <div class="wrap">
       <div class="card auth-card" role="form">
-        <h1 class="sec-title" style="font-size: 26px; margin: 0 0 4px">С возвращением &hearts;</h1>
-        <p style="color: var(--text-muted); margin: 0 0 20px">Войдите в ваше общее пространство.</p>
+        <h1 class="sec-title" style="font-size: 26px; margin: 0 0 4px">Привет &hearts;</h1>
+        <p style="color: var(--text-muted); margin: 0 0 20px">Заходи.</p>
 
         <form class="grid" style="gap: 14px" @submit.prevent="submit">
           <BaseField
             v-model="email"
             label="Email"
             type="email"
-            placeholder="ваш@email"
+            placeholder="почта"
             autocomplete="email"
             inputmode="email"
           />

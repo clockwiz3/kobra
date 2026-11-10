@@ -1,78 +1,64 @@
-# Architecture: Modular Monolith (couple-as-shard multi-tenancy)
+# Архитектура
 
-## Overview
+Один Laravel-монолит отдаёт API, Vue 3 PWA работает поверх него. Код разложен по доменам (Identity, Couples, Kanban, Gamification, Notifications, Telegram), внутри каждого цепочка Controller → Service → Model.
 
-Cuploid — единый Laravel-монолит (API) + Vue 3 PWA, организованный как **Modular Monolith**: один деплой, но чёткие границы доменных модулей (Identity, Couples, Gamification, Waitlist, Notifications, Telegram, Customization). Внутри каждого модуля — слои (Controller → Service → Model). Поверх всего лежит **сквозной слой изоляции tenancy**: каждая пара — приватный shard, и доступ к couple-данным возможен только в рамках текущего шарда.
+Главное правило: **данные пары изолированы**. Все таблицы пары содержат `couple_id`, и прочитать или записать чужое нельзя даже по ошибке. Пользователей у нас двое, так что это с запасом. Но слой написан, покрыт тестами и ничего не стоит, поэтому держим.
 
-Выбор обусловлен: соло-разработчик, низкая операционная сложность важнее независимого деплоя, домен средней сложности с понятными границами, и возможность позже вынести модуль в отдельный сервис без переписывания. Микросервисы/DDD были бы оверинжинирингом, чистый Layered — слишком плоским для tenancy-инварианта.
-
-## Decision Rationale
-
-- **Project type:** приватный таск-трекер для пар (multi-tenant SaaS, tenant = пара)
-- **Tech stack:** PHP 8.3 / Laravel 11 (API), Vue 3 + TypeScript (PWA), PostgreSQL, Eloquent
-- **Key factor:** изоляция данных пары (shard) — security-инвариант; модульность даёт границы доменов при простой эксплуатации монолита
-
-## Folder Structure
+## Где что лежит
 
 ```
 app/
-├── Models/                      # Eloquent; couple-owned модели используют trait CoupleScoped
+├── Models/                      # couple-owned модели используют трейт CoupleScoped
 ├── Http/
 │   ├── Controllers/Api/
-│   │   ├── Couple/              # couple-scoped (за middleware ResolveCoupleContext + Policy)
-│   │   ├── Waitlist/            # pre-account, ВНЕ tenancy
+│   │   ├── Couple/              # всё про пару: доска, колонки, карточки, бэклог
+│   │   ├── AuthController.php   # вход и выход
+│   │   ├── ProfileController.php
 │   │   └── TelegramWebhookController.php
-│   ├── Requests/               # FormRequest-валидация
+│   ├── Requests/                # валидация (FormRequest)
 │   └── Middleware/ResolveCoupleContext.php
-├── Services/                    # доменная логика по модулям
-│   ├── Identity/               # AuthService (Sanctum token login/logout; закрытый запуск)
-│   ├── Couples/                # CoupleInvitationService, CoupleDeletionService (lifecycle шарда)
-│   ├── Gamification/           # GamificationService (XP/стрик/ачивки)
-│   ├── Waitlist/               # WaitlistService (double-opt-in)
-│   ├── Notifications/          # NotificationDispatcher + Channels (email/telegram)
-│   └── Telegram/               # TelegramService (Bot API)
-├── Jobs/                        # очереди; tenant-aware (явный couple_id)
-├── Policies/                    # CouplePolicy (членство в паре)
-├── Data/                        # DTO (spatie/laravel-data) → генерация TS-типов
-├── Concerns/CoupleScoped.php    # trait: global scope + авто-стамп couple_id
-├── Scopes/CoupleScope.php       # fail-closed global scope
-└── Support/CoupleContext.php    # request-fresh носитель текущего couple_id
+├── Services/
+│   ├── Identity/                # AuthService, ProfileService
+│   ├── Couples/                 # приглашение и удаление пары
+│   ├── Kanban/                  # BoardService, CardService
+│   ├── Gamification/            # заготовка: XP, стрик, ачивки
+│   ├── Notifications/           # outbox и каналы email/telegram
+│   └── Telegram/
+├── Events/                      # broadcast-события на канал couple.{id}
+├── Broadcasting/CoupleChannel.php
+├── Data/                        # DTO (spatie/laravel-data), из них генерируются TS-типы
+├── Concerns/CoupleScoped.php    # глобальный scope и автопростановка couple_id
+├── Scopes/CoupleScope.php
+└── Support/CoupleContext.php    # текущий couple_id на время запроса
 
-database/migrations/             # пиннированный порядок; couple_id FK ON DELETE CASCADE
-routes/{api.php, channels.php}   # channels.php: приватные каналы couple.{id}
-resources/js/{pages,components,stores,composables,api}   # Vue 3 + TS frontend
-docs/DATABASE.md                 # ERD + closed-list couple-owned таблиц (источник правды)
-tests/Feature/Tenancy/           # leak-harness (acceptance-гейт изоляции)
+resources/js/{pages,components,stores,composables,api,lib}
+docs/DATABASE.md                 # схема и список couple-owned таблиц
+tests/Feature/{Couple,Realtime}/  # в т.ч. тесты изоляции: пары A и B не видят друг друга
 ```
 
-## Dependency Rules
+## Как слои зависят друг от друга
 
-- ✅ Controller → Service → Model. Контроллеры тонкие; доменная логика — в сервисах.
-- ✅ Модули общаются через публичные сервисы/доменные события, не лезут во внутренности друг друга.
-- ✅ Couple-данные читаются/пишутся только через модели с `CoupleScoped` при установленном `CoupleContext`.
-- ❌ Контроллер не вызывает Eloquent для доменной логики напрямую (только тонкие read-resource ок).
-- ❌ Raw `DB::table()` / builder по couple-owned таблицам (обходит global scope) — запрещено; только `TenantQuery`-хелпер с явным `couple_id`.
-- ❌ Waitlist/Telegram-linking/Identity **не** зависят от tenancy (pre-/cross-shard данные, без `couple_id`).
+- Контроллеры тонкие, логика живёт в сервисах.
+- Сервис получает пару **явным аргументом** и не вытаскивает её из глобального состояния.
+- Данные пары читаются только через модели с `CoupleScoped` при выставленном `CoupleContext`.
+- `DB::table()` по таблицам пары не используем: он обходит scope.
+- Вход, профиль и Telegram-линковка живут вне пары и без `couple_id`.
 
-## Layer/Module Communication
+## Реалтайм
 
-- **Синхронно:** Controller → Service (внутри запроса). Сервис принимает **явный** `Couple`/`couple_id`, не читает tenant из ambient-состояния для решения «что вернуть».
-- **Асинхронно:** доменные события → Jobs (очередь). Каждая tenant-aware джоба получает `couple_id` в конструкторе, биндит/чистит `CoupleContext` в try/finally; `Queue::before` забывает stale-контекст между джобами.
-- **Уведомления:** доменные события кладут запись в outbox (`notifications`), воркер доставляет по каналам (email/telegram).
-- **Real-time (реализовано):** Reverb + Laravel Echo, **presence-канал `couple.{coupleId}`** (единый: доменные события + онлайн-присутствие), fail-closed авторизация по членству в паре. Доменные события (`app/Events/*`, `ShouldBroadcastNow`, DTO-payload) вещаются из сервисов через `broadcast()->toOthers()`; фронт применяет точечной мутацией стора. Конвенция «реактивность по умолчанию» — `rules/base.md`.
+Reverb + Echo, один presence-канал `couple.{coupleId}` на пару: по нему идут и события, и статус «в сети». Сервис после изменения делает `broadcast(...)->toOthers()`, в payload кладётся DTO. Фронт применяет событие точечно к стору. Подробнее в `docs/realtime.md`.
 
-## Key Principles
+## Принципы
 
-1. **Tenancy — security-инвариант, защита в слоях:** явный `couple_id` в сервисе (первичная граница) + `CoupleScoped`/`CoupleScope` (backstop) + FK CASCADE + Policy + CI leak-тесты. Ни один слой не является единственной гарантией.
-2. **Fail-closed:** при пустом `CoupleContext` scope добавляет always-false предикат и бросает исключение в non-prod/testing. No-op-on-null запрещён.
-3. **Context request-fresh:** `CoupleContext` наполняется middleware из активного членства, никогда не кэшируется на токене/сессии.
-4. **Один общий gamification-профиль на пару** (UNIQUE `couple_id`); атрибуция партнёров выводится из `activity_events.actor_user_id`, наружу — только комбинированные тоталы. Геймификация upside-only.
-5. **Граница pre-account:** вайтлист и линковка Telegram живут вне shard-системы.
-6. **DTO-контракты:** наружу — `spatie/laravel-data` DTO (→ TS-типы), не сырые Eloquent-модели (особенно в broadcast-payload).
+1. **Изоляция в несколько слоёв:** явный `couple_id` в сервисе, `CoupleScope` как страховка, FK `ON DELETE CASCADE`, тесты на утечки. Ни один слой не единственная защита.
+2. **Fail-closed:** если `CoupleContext` пуст, scope в dev и тестах бросает исключение, а на проде возвращает пустой результат. Тихо отдать всё нельзя.
+3. **Контекст живёт один запрос:** middleware заполняет его из активного членства в паре и нигде не кэширует.
+4. **Наружу только DTO,** без сырых Eloquent-моделей, особенно в broadcast.
+5. **Геймификация общая на пару** (один профиль) и только с плюсами.
 
-## Code Examples
+## Примеры
 
-### Trait изоляции (couple-owned модель)
+### Трейт изоляции
 ```php
 // app/Concerns/CoupleScoped.php
 trait CoupleScoped
@@ -81,14 +67,13 @@ trait CoupleScoped
     {
         static::addGlobalScope(new CoupleScope());
         static::creating(function ($model) {
-            $id = CoupleContext::id();              // throw, если null
-            $model->couple_id = $id;                // перетираем клиентское значение
+            $model->couple_id = CoupleContext::id(); // бросит, если контекста нет
         });
     }
 }
 ```
 
-### Fail-closed global scope
+### Fail-closed scope
 ```php
 // app/Scopes/CoupleScope.php
 final class CoupleScope implements Scope
@@ -98,9 +83,9 @@ final class CoupleScope implements Scope
         $id = CoupleContext::idOrNull();
         if ($id === null) {
             if (! app()->isProduction()) {
-                throw new MissingCoupleContextException($model::class); // ловим в CI
+                throw new MissingCoupleContextException($model::class);
             }
-            $builder->whereRaw('1 = 0');            // в prod — ничего не отдаём (fail-closed)
+            $builder->whereRaw('1 = 0');
             return;
         }
         $builder->where($model->getTable().'.couple_id', $id);
@@ -108,21 +93,11 @@ final class CoupleScope implements Scope
 }
 ```
 
-### Сервис принимает явный couple_id (не ambient)
-```php
-// app/Services/Gamification/GamificationService.php
-public function recordEvent(Couple $couple, string $type, ?User $actor, array $payload = []): void
-{
-    abort_unless($couple->status === CoupleStatus::Active, 409); // начисления только в активном шарде
-    // ... append activity_event, idempotent XP drip, inverted streak, unlock achievements
-}
-```
+## Чего не делать
 
-## Anti-Patterns
-
-- ❌ Чтение tenant из ambient-состояния внутри сервиса вместо явного аргумента `couple_id`.
-- ❌ Доменная логика в контроллере вместо сервиса.
-- ❌ Кэширование приватных couple-ответов в service worker / по `user_id`-ключу (утечка между шардами).
-- ❌ Per-user/кросс-парные соревновательные механики, рефералы, лидерборды (нарушают приватность шарда).
-- ❌ Стрик/ачивки, наказывающие за бездействие одного партнёра (токсично для романтического продукта).
-- ❌ Новая couple-таблица без `couple_id`/`CoupleScoped` и без записи в closed-list `docs/DATABASE.md`.
+- Логику в контроллере вместо сервиса.
+- Брать пару из глобального состояния внутри сервиса.
+- Кэшировать ответы с данными пары в service worker.
+- Делать соревнование между нами, рейтинги или штрафы за пропуски.
+- Заводить новую таблицу пары без `couple_id` и `CoupleScoped` и не вписать её в `docs/DATABASE.md`.
+- Менять данные пары без broadcast-события.

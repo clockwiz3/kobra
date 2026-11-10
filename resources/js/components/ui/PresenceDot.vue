@@ -10,7 +10,7 @@ defineProps<{ online: boolean; label?: string }>()
   <span
     class="presence"
     :class="{ 'is-online': online }"
-    :title="label ?? (online ? 'Партнёр в сети' : 'Партнёр не в сети')"
+    :title="label ?? (online ? 'В сети' : 'Не в сети')"
   >
     <span class="presence__dot" aria-hidden="true" />
     <span v-if="label" class="presence__label">{{ label }}</span>

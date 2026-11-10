@@ -13,7 +13,7 @@ onMounted(() => log.debug('mounted'))
   <section class="section-stub">
     <h1 class="sec-title">Вишлисты</h1>
     <BaseCard>
-      <p class="stub-text">Скоро здесь появятся ваши списки желаний — со «скрытой бронью» подарков партнёром. 💝</p>
+      <p class="stub-text">Тут будут вишлисты. Подарок можно будет тихо забронировать, и второй не узнает.</p>
     </BaseCard>
   </section>
 </template>

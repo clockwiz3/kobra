@@ -1,48 +1,43 @@
-# Cuploid
+# Kobra (кодовое имя cuploid)
 
-## Обзор
+## Что это
 
-Приватный романтический таск-трекер для пар. Ниша рынка СНГ, где нет крупных аналогов уровня Cupla / Homsy. Каждая пара получает изолированное приватное пространство для совместного планирования задач, списков желаний и тёплой геймификации отношений. Продукт делается соло-разработчиком (для себя и партнёра) с продуктовой амбицией.
+Общий трекер дел для двоих: Серёжи и Леси. Не продукт и не стартап. Пользователей ровно двое, регистрации, онбординга и маркетинга нет. Решения принимаем из расчёта «нам двоим удобно», а не «как это масштабировать».
 
-## Core Features
+Бренд в интерфейсе — Kobra. Репозиторий, неймспейсы, база и ключи localStorage (`cuploid.token/theme/accent`) остаются `cuploid`, их не переименовываем.
 
-- **Kanban** — совместные задачи пары с real-time синхронизацией (партнёр двигает карточку — ты видишь сразу).
-- **Wishlists** (вишлисты) — списки желаний со «скрытой бронью» подарков партнёром.
-- **Геймификация ретеншна** — общий стрик пары, XP/уровни, приватные achievements и пасхалки, внутренняя валюта hearts. Только upside-механики (см. Architecture Notes).
-- **Кастомизация («цифровой ад»)** — цветовые темы, анимации, частицы, пасхалки; движок тем и пресетов.
-- **Telegram-бот** — уведомления и привязка аккаунта/вайтлист-записи.
-- **Mobile** — PWA-first, далее упаковка в Capacitor (App Store / Google Play).
-- **Этап 0 (текущий)** — DB-фундамент + вайтлист с double-opt-in (без рефералов).
+## Фичи
 
-## Tech Stack
+Готово:
 
-- **Programming language:** PHP 8.3 (backend), TypeScript (frontend)
-- **Framework:** Laravel 13 (API) + Vue 3 (SPA/PWA)
-- **Database:** PostgreSQL
-- **ORM:** Eloquent
-- **Auth:** Laravel Sanctum (passwordless-ready, Telegram-link)
-- **Realtime:** Laravel Reverb + Laravel Echo (приватные каналы `couple.{id}`) — добавляется на milestone Kanban
-- **Queues:** Redis + `queue:work` (Horizon — только на прод-Linux; на Windows-деве недоступен: ext-pcntl). Сейчас dev-дефолт `QUEUE_CONNECTION=sync`
-- **Frontend tooling:** Vite 8, Pinia, Vue Router, Tailwind CSS v4 (`@theme`), vite-plugin-pwa; dayjs (даты/дейтпикер, ru-локаль); Vitest + @vue/test-utils + jsdom (компонентные тесты)
-- **Type bridge:** spatie/laravel-data + typescript-transformer (end-to-end типы PHP → TS)
-- **Integrations:** Telegram Bot API, SMTP/email
-- **Mobile:** PWA → Capacitor
+- **Доска.** Колонки и карточки, перетаскивание, исполнитель (он, она, вместе), приоритет, дедлайн (дата или период), время. Колонка «Готово» терминальная: попадание туда закрывает задачу.
+- **Бэклог (раздел «Задачи»).** Карточки, убранные с доски. Можно вернуть в любую колонку.
+- **Реалтайм.** Изменения одного сразу видны второму, плюс индикатор «в сети».
+- **Главная.** Счётчики, лента изменений, быстрые ссылки.
+- **Профиль.** Имя и рамка своих карточек (цвет или градиент, стиль, мерцание).
+- **Темы.** light (по умолчанию), dark, pixel и пять гамм.
+- **PWA.**
 
-## Architecture Notes
+Хотим:
 
-> Подробные правила архитектуры — в `.ai-factory/ARCHITECTURE.md`. Pattern: **Modular Monolith** (couple-as-shard multi-tenancy).
+- **Вишлисты** со скрытой бронью: забронировал подарок, второй не видит.
+- **Календарь и Гант** по дедлайнам карточек.
+- **Геймификация** в мягком виде: общий стрик, уровни, ачивки, пасхалки. Стрик растёт, если хоть кто-то что-то сделал, и не наказывает за пропуски.
+- **Telegram-бот:** напоминания о дедлайнах, годовщины.
+- **ИИ-помощник:** см. ROADMAP.
 
-Ключевой инвариант: **пара = изолированный shard (tenant)**. Single-DB, shared-schema, row-level multi-tenancy по дискриминатору `couple_id`; строка `couples` — это сам shard. Детали — в `ARCHITECTURE.md`.
+## Стек
 
-- **Изоляция в слоях:** явный `couple_id` на уровне сервиса + `CoupleScoped`/`CoupleScope` (**fail-closed**) + FK `ON DELETE CASCADE` + Policy + CI leak-тесты. `CoupleContext` request-fresh, не кэшируется на токене. Очереди — явный tenant per job.
-- **Геймификация — приватная и кооперативная:** один общий профиль на пару; **нет** рефералов, лидербордов, кросс-парных/соревновательных механик. Валентность **upside-only**: стрик растёт, если активен хотя бы один партнёр, и никогда не наказывает за бездействие; return-триггеры — warmth, не guilt.
-- **Вайтлист — pre-account, вне shard-системы:** чистый double-opt-in + опц. Telegram, без рефералов.
+- PHP 8.3, Laravel 13: API, Sanctum (вход по Bearer-токену), Reverb (вебсокеты)
+- Vue 3 + TypeScript, Vite 8, Pinia, Vue Router, Tailwind v4, vite-plugin-pwa, dayjs
+- PostgreSQL, Eloquent
+- spatie/laravel-data + typescript-transformer: DTO в PHP, типы в TS
+- Тесты: Pest, Vitest + @vue/test-utils
+- Очередь: `sync`, отдельного воркера нет (Horizon на Windows не работает из-за ext-pcntl)
 
-## Non-Functional Requirements
+## Правила, которые стоит держать
 
-- **Logging:** verbose, env-driven `LOG_LEVEL`, формат `[Service.method] message {context}`; без PII в prod-логах ниже WARN.
-- **Tenancy/Isolation:** изоляция данных пары трактуется как security-инвариант (fail-closed scope, FK cascade, Policy, два-парный leak-harness как acceptance-гейт).
-- **Error handling:** структурированные JSON-ошибки; идемпотентность критичных операций (waitlist join/confirm, notification outbox, achievement unlock).
-- **Security:** Sanctum, rate limiting, защита от email-enumeration на вайтлисте, секрет Telegram-webhook, минимальные/несенситивные payload в outbox.
-- **Privacy:** приватность пары; удаление общих данных — через grace-window + уведомление партнёра; TTL-purge архивных шардов.
-- **Testing:** ключевые сценарии + обязательный harness изоляции tenancy.
+- **Данные пары изолированы** по `couple_id` (подробно в `ARCHITECTURE.md`). Для двоих это с запасом, но слой уже есть и покрыт тестами, ломать его не надо.
+- **Каждое изменение данных пары рассылается** событием на канал `couple.{id}`, иначе второй его не увидит.
+- **Никакой социалки:** ни рефералов, ни рейтингов, ни сравнений.
+- **Логи** в формате `[Service.method] message {context}`, уровень берётся из `LOG_LEVEL`.

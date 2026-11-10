@@ -13,7 +13,7 @@ onMounted(() => log.debug('mounted'))
   <section class="section-stub">
     <h1 class="sec-title">Гант</h1>
     <BaseCard>
-      <p class="stub-text">Скоро здесь будет диаграмма Ганта — задачи пары на временной шкале. 📊</p>
+      <p class="stub-text">Тут будут задачи на временной шкале.</p>
     </BaseCard>
   </section>
 </template>

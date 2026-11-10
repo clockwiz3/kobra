@@ -102,7 +102,7 @@ async function onDelete(card: Card): Promise<void> {
 
     <!-- Пусто: тёплый намёк, что сюда попадают убранные с доски карточки. -->
     <BaseCard v-if="store.backlogCards.length === 0">
-      <p class="stub-text">Пока пусто. Добавьте задачу выше или уберите карточку с доски — она появится здесь. 🗂️</p>
+      <p class="stub-text">Пусто. Сюда попадают задачи, которые убрали с доски.</p>
     </BaseCard>
 
     <ul v-else class="backlog">

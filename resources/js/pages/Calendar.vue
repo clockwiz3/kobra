@@ -13,7 +13,7 @@ onMounted(() => log.debug('mounted'))
   <section class="section-stub">
     <h1 class="sec-title">Календарь</h1>
     <BaseCard>
-      <p class="stub-text">Скоро здесь будет общий календарь пары — дедлайны, даты и тёплые годовщины. 📅</p>
+      <p class="stub-text">Тут будет календарь: дедлайны и наши даты.</p>
     </BaseCard>
   </section>
 </template>

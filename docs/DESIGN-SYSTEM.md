@@ -1,6 +1,6 @@
-# Cuploid — Design System
+# Дизайн-система
 
-Источник: смокапено в **Claude Design** (claude.ai/design) и импортировано в репозиторий. Оригинальный браузабельный showcase (self-contained) и расшифровка дизайн-сессии лежат в `docs/design/`.
+Нарисована в Claude Design и перенесена в код. Исходный showcase и лог дизайн-сессии лежат в `docs/design/`.
 
 ## Файлы
 
@@ -17,8 +17,8 @@
 
 | Тема | Назначение | Характер |
 |------|-----------|----------|
-| `dark` | **основная** | rose→violet на near-black (#0F0F17), мягкие тени + свечение |
-| `light` | альтернатива | кремовая ретро-бумага (#F4E7D6), тёплый, paper-grain |
+| `light` | **по умолчанию** | кремовая бумага (#F4E7D6), зерно |
+| `dark` | вторая | rose→violet на почти чёрном (#0F0F17), мягкие тени и свечение |
 | `pixel` | спец-режим | 8-бит: пиксельные шрифты, жёсткие offset-тени, квадратная геометрия (радиусы = 0) |
 
 ## Гаммы — `[data-accent]` (default: `honey`)
@@ -44,7 +44,7 @@
 
 **Overlay-слой и контролы выбора:** `.overlay`+`.modal` (диалоги), `.checkbox`, `.radio`, `.choice-list`/`.choice` (выбираемые карточки), утилита `.sr-only`. Vue-компоненты поверх этих классов — `BaseModal`, `BaseCheckbox`, `BaseRadioGroup`/`BaseRadio`, `ConfirmDialog` + императивный `useConfirm()` — описаны в [ui-library.md](ui-library.md).
 
-## Подключение (в index.html при scaffolding, задача #1)
+## Подключение
 
 Шрифты (Google Fonts; для PWA-offline позже — самохостинг, см. follow-ups):
 
@@ -78,19 +78,13 @@ import ThemeSwitch from '@/components/ui/ThemeSwitch.vue'
 </script>
 <template>
   <ThemeSwitch />
-  <BaseButton variant="primary">Создать пространство ♥</BaseButton>
+  <BaseButton variant="primary">Добавить ♥</BaseButton>
 </template>
 ```
 
-## Связь с продуктом
+## Что можно доделать
 
-- **Customization Engine (milestone):** темы + 5 гамм — прямое зерно «широкой кастомизации». Выбор пары должен персиститься в `couples.settings` (shard-scoped), чтобы оба партнёра видели общий стиль. `pixel`-тема и пасхалочные гаммы — кандидаты на разблокировку за **hearts**.
-- **Геймификация (upside-only):** в DS уже есть `.goal`/`.hearts`/стрик-бейдж — визуальный язык для общего профиля пары и валюты hearts. Без рейтингов/сравнений между парами.
-- **Приватность:** UI оперирует «он/она/вместе» и аватарами пары — всё в рамках одного шарда.
-
-## Follow-ups
-
-1. **Self-host шрифтов** для PWA-offline (сейчас Google Fonts via `<link>` — нужен интернет). Workbox-precache локальных woff2 вместо рантайм-кэша сторонних CDN.
-2. **Доступность:** проверить контраст `text-muted` на `surface` в каждой теме (особенно light); прогнать `design:accessibility-review`.
-3. **Расширить порт компонентов** по мере надобности (toast, switch, segmented, couple-avatars, goal/hearts, task-card) — пока перенесён базовый набор.
-4. **Per-couple persist** темы/гаммы при появлении активной пары (см. Customization Engine).
+1. **Шрифты локально,** чтобы PWA работала офлайн. Сейчас они грузятся с Google Fonts.
+2. **Контраст** `text-muted` на `surface` в светлой теме стоит проверить.
+3. **Остальные компоненты** (toast, switch, segmented, аватары, прогресс целей) переносить по мере надобности.
+4. **Общая тема пары:** сохранять выбор в `couples.settings`, чтобы у обоих был один стиль. Пока тема хранится в localStorage у каждого своя.

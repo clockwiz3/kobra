@@ -1,6 +1,6 @@
 <script setup lang="ts">
-// Главная — дашборд-сводка пары: счётчики доски/бэклога, онлайн-статус партнёра,
-// live-лента активности (realtime), быстрые ссылки и плейсхолдеры геймификации.
+// Главная: счётчики доски и бэклога, кто в сети, лента изменений в реальном времени,
+// быстрые ссылки и заглушки под будущие стрик/уровни/ачивки.
 import { onMounted, computed } from 'vue'
 import { RouterLink } from 'vue-router'
 import { BaseCard, BaseBadge, PresenceDot } from '@/components/ui'
@@ -20,9 +20,15 @@ onMounted(async () => {
   log.debug('mounted', { cards: store.totalCards })
 })
 
-const greetingName = computed(() => auth.user?.name?.trim() || 'дорогой человек')
-const pairNames = computed(() => store.members.map((m) => m.name).filter(Boolean).join(' + '))
+const greeting = computed(() => {
+  const name = auth.user?.name?.trim()
+  return name ? `Привет, ${name}!` : 'Привет!'
+})
 const hasPartner = computed(() => store.members.length > 1)
+// Второй участник пары — тот, кто не текущий юзер.
+const partnerName = computed(
+  () => store.members.find((m) => m.id !== auth.user?.id)?.name?.trim() || 'Второй',
+)
 
 const stats = computed(() => [
   { key: 'cards', label: 'Задач на доске', value: store.totalCards },
@@ -40,13 +46,12 @@ const quickLinks = [
 <template>
   <section class="home">
     <header class="home__head">
-      <h1 class="sec-title">Привет, {{ greetingName }}!</h1>
-      <p v-if="pairNames" class="home__pair">Пара: {{ pairNames }}</p>
+      <h1 class="sec-title">{{ greeting }}</h1>
       <PresenceDot
         v-if="hasPartner"
         class="home__presence"
         :online="partnerOnline"
-        :label="partnerOnline ? 'Партнёр в сети' : 'Партнёр не в сети'"
+        :label="partnerOnline ? `${partnerName} в сети` : `${partnerName} не в сети`"
       />
     </header>
 
@@ -75,28 +80,28 @@ const quickLinks = [
         <!-- Лента активности (realtime) -->
         <BaseCard class="home__feed">
           <div class="home__feed-head">
-            <h2 class="home__h2">Активность пары</h2>
+            <h2 class="home__h2">Что нового</h2>
             <BaseBadge>live</BaseBadge>
           </div>
           <ul v-if="recentEvents.length" class="home__feed-list">
             <li v-for="e in recentEvents" :key="e.id" class="home__feed-item">{{ e.text }}</li>
           </ul>
-          <p v-else class="stub-text">Пока тихо — изменения партнёра появятся здесь сразу.</p>
+          <p v-else class="stub-text">Пока тихо.</p>
         </BaseCard>
 
-        <!-- Геймификация (плейсхолдеры до Gamification Core) -->
+        <!-- Заглушки до геймификации -->
         <BaseCard class="home__game">
-          <h2 class="home__h2">Геймификация</h2>
+          <h2 class="home__h2">Скоро</h2>
           <div class="home__game-row">
-            <span class="home__game-key">Стрик пары</span>
+            <span class="home__game-key">Серия дней</span>
             <span class="stub-text">скоро</span>
           </div>
           <div class="home__game-row">
-            <span class="home__game-key">Уровень / XP</span>
+            <span class="home__game-key">Уровень</span>
             <span class="stub-text">скоро</span>
           </div>
           <div class="home__game-row">
-            <span class="home__game-key">Достижения</span>
+            <span class="home__game-key">Ачивки</span>
             <span class="stub-text">скоро</span>
           </div>
         </BaseCard>
@@ -116,7 +121,6 @@ const quickLinks = [
 }
 
 .home__head { margin-bottom: 18px; }
-.home__pair { margin: 4px 0 0; color: var(--text-muted, inherit); }
 .home__presence { margin-top: 8px; }
 
 .home__grid {
